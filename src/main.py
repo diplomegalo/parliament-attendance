@@ -1,5 +1,5 @@
 def main():
-    print("Welcome to the Parliament Attendance System")
+    print("Work in progress...")
 
 if __name__ == "__main__":
     main()
