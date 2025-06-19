@@ -1,0 +1,15 @@
+{
+  "name": "Parliament Attendance",
+  "context": "..",
+  "dockerFile": "Dockerfile",
+  "appPort": [8000],
+  "extensions": [
+    "ms-python.python",
+    "ms-toolsai.jupyter"
+  ],
+  "settings": {
+    "python.pythonPath": "/usr/local/bin/python"
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "workspaceFolder": "/workspace"
+}
