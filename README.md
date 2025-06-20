@@ -1,5 +1,7 @@
 # Parliament Attendance System
 
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/vscode-remote-try-java)
+
 This project is a Parliament Attendance System that allows for tracking attendance of members in a parliamentary setting. It is designed to be run in a development container for ease of setup and consistency across environments.
 
 ## Getting Started

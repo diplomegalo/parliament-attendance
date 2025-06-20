@@ -1,17 +1,15 @@
-FROM python:3.13.5-slim
+FROM python:3.11-slim
 
-# Set the working directory
-WORKDIR /usr/src/app
+ENV PYTHONUNBUFFERED 1
 
-# Copy the requirements file into the container
-COPY requirements.txt ./
+# [Optional] If your requirements rarely change, uncomment this section to add them to the image.
+# COPY requirements.txt /tmp/pip-tmp/
+# RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
+#    && rm -rf /tmp/pip-tmp
 
-# Install the required packages
-RUN pip install --no-cache-dir -r requirements.txt
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# [Optional] Uncomment this section to install additional OS packages.
+# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+#     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-# Copy the rest of the application code into the container
-COPY . .
 
-# Command to run the application
-CMD ["python", "src/main.py"]
+
