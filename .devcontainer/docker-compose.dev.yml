@@ -1,0 +1,9 @@
+services:
+  frontend:
+    environment:
+      - NODE_ENV=development
+  backend:
+      environment:
+        - PYTHONUNBUFFERED=1
+      volumes:
+        - ../..:/workspaces
