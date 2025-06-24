@@ -2,11 +2,9 @@ services:
   frontend:
     image: node:24.2-slim
     working_dir: /workspaces/src/frontend
-    command: ["sleep", "infinity"]
+    command: sh -c "npm install && npm run dev"
     ports:
       - "3000:3000"
-    volumes:
-      - ../../src/frontend:/workspaces/src/frontend
     
   backend:
     build:
