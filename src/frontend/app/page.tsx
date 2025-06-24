@@ -14,6 +14,6 @@ export default function Home() {
     });
   }, []);
   return (
-    <h1>Work in progress</h1>
+    <h1 className={styles.workinprogress}>Work in progress</h1>
   );
 }
