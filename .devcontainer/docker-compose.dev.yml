@@ -9,6 +9,3 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ../:/workspaces/parliament-attendance
-  db:
-    volumes:
-      - ../src/db:/workspaces/db
