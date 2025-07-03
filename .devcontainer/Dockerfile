@@ -1,4 +1,12 @@
+ARG USERNAME
+ARG USER_UID
+ARG USER_GID
+
 FROM python:3.11-slim
+
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --shell /bin/bash --uid $USER_UID --gid $USER_GID $USERNAME
 
 ENV PYTHONUNBUFFERED 1
 
@@ -12,6 +20,3 @@ RUN pip install --upgrade pip
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
-
-
-

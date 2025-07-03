@@ -79,7 +79,7 @@ def fetch_minutes_from_web():
             ref = cells[0].find("a", href=True).text.strip()
             session = cells[1].find("i").text.strip()
             url = cells[3].find_all("a")[2]["href"]
-            date = parse_french_date(cells[2].text.strip())
+            date_plop = parse_french_date(cells[2].text.strip())
             is_temporary = (
                 True if (
                     cells[4].find("i").text.strip() == "version provisoire"
@@ -91,7 +91,7 @@ def fetch_minutes_from_web():
             # Création de l'objet Minute
             minute = Minute(
                 ref=ref,
-                date=date,
+                date=date_plop.isoformat(),
                 session=session,
                 url=url,
                 is_temporary=is_temporary,
