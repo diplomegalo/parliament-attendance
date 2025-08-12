@@ -1,12 +1,4 @@
-ARG USERNAME
-ARG USER_UID
-ARG USER_GID
-
 FROM python:3.11-slim
-
-
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --shell /bin/bash --uid $USER_UID --gid $USER_GID $USERNAME
 
 ENV PYTHONUNBUFFERED 1
 

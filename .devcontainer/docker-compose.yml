@@ -5,14 +5,18 @@ services:
   #   command: sh -c "npm install && npm run dev"
   #   ports:
   #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=development
+  #   volumes:
+  #     - ../src/frontend:/workspaces/src/frontend
     
   backend:
     build:
       dockerfile: Dockerfile
-      args:
-        USERNAME: ${USERNAME}
-        USER_UID: ${USER_UID}
-        USER_GID: ${USER_GID}
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../:/workspaces/parliament-attendance
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
@@ -28,8 +32,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parliament_attendance
     volumes:
       - postgres-data:/var/lib/postgresql/data
     # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward PostgreSQL locally.

@@ -8,6 +8,7 @@ import requests
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
+from backend.init_db import create_database, run_schema
 from models import Minute
 from database import insert_minutes_bulk, check_database_connection
 
@@ -16,6 +17,12 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# Initialisation de la base de données
+logging.info("Initialisation de la base de données...")
+create_database()
+run_schema()
+logging.info("Base de données initialisée avec succès")
 
 BASE_URL = "https://www.lachambre.be"
 
