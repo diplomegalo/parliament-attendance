@@ -78,52 +78,51 @@ def fetch_minutes_from_web():
             continue
 
         try:
-            cell_0 = cells[0]  # Cast to Tag
-            ref_link = cell_0.find("a", href=True)
+            ref_link = cells[0]("a")
             if ref_link is None:
                 logging.error("Lien de référence introuvable")
                 continue
             ref = ref_link.text.strip()
             
-            cell_1: Tag = cells[1]
-            session_element = cell_1.find("i")
-            if session_element is None:
-                logging.error("Élément de session introuvable")
-                continue
-            session = session_element.text.strip()
+            # cell_1: Tag = cells[1]
+            # session_element = cell_1.find("i")
+            # if session_element is None:
+                # logging.error("Élément de session introuvable")
+                # continue
+            # session = session_element.text.strip()
             
-            cell_3: Tag = cells[3]
-            links = cell_3.find_all("a")
-            if len(links) < 3:
-                logging.error("Le nombre de liens attendus ne correspond pas")
-                continue
-            url = links[2]['href']
+            # cell_3: Tag = cells[3]
+            # links = cell_3.find_all("a")
+            # if len(links) < 3:
+                # logging.error("Le nombre de liens attendus ne correspond pas")
+                # continue
+            # url = links[2]['href']
             
-            cell_2: Tag = cells[2]
-            date_str = cell_2.text.strip()
-            session_date = parse_french_date(date_str)
+            # cell_2: Tag = cells[2]
+            # date_str = cell_2.text.strip()
+            # session_date = parse_french_date(date_str)
             
-            cell_4: Tag = cells[4]
-            i_tag = cell_4.find("i")
-            is_temporary = (
-                True if (i_tag is not None and i_tag.text.strip() == "version provisoire")
-                else False
-            )
+            # cell_4: Tag = cells[4]
+            # i_tag = cell_4.find("i")
+            # is_temporary = (
+                # True if (i_tag is not None and i_tag.text.strip() == "version provisoire")
+                # else False
+            # )
 
-            text_integral = fetch_text_integral_from_url(BASE_URL + url)
+            # text_integral = fetch_text_integral_from_url(BASE_URL + url)
 
-            # Création de l'objet Minute
-            minute = Minute(
-                ref=ref,
-                date=session_date.isoformat(),
-                session=session,
-                url=url,
-                is_temporary=is_temporary,
-                text_integral=text_integral
-            )
+            # # Création de l'objet Minute
+            # minute = Minute(
+                # ref=ref,
+                # date=session_date.isoformat(),
+                # session=session,
+                # url=url,
+                # is_temporary=is_temporary,
+                # text_integral=text_integral
+            # )
 
-            minutes.append(minute)
-            logging.debug(f"Minute récupérée: {minute}")
+            # minutes.append(minute)
+            # logging.debug(f"Minute récupérée: {minute}")
 
         except Exception as e:
             logging.warning(f"Erreur lors du parsing d'une ligne: {e}")
