@@ -7,22 +7,15 @@ Script simple qui scrape, parse et sauvegarde en DB.
 import requests
 import logging
 from datetime import datetime
-from bs4 import BeautifulSoup
-from backend.init_db import create_database, run_schema
+from bs4 import BeautifulSoup, Tag
 from models import Minute
-from database import insert_minutes_bulk, check_database_connection
+from database import insert_minutes_bulk
 
 # Configuration des logs
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
-# Initialisation de la base de données
-logging.info("Initialisation de la base de données...")
-create_database()
-run_schema()
-logging.info("Base de données initialisée avec succès")
 
 BASE_URL = "https://www.lachambre.be"
 
@@ -77,20 +70,44 @@ def fetch_minutes_from_web():
 
     minutes = []
     for row in rows:
-        cells = row.find_all(["td"])
+        if not isinstance(row, Tag):
+            continue
+        cells = row.find_all("td")
         if len(cells) < 5:
             logging.error("Le nombre de cellule attendue ne correspond pas")
+            continue
 
         try:
-            # Extraction des données
-            ref = cells[0].find("a", href=True).text.strip()
-            session = cells[1].find("i").text.strip()
-            url = cells[3].find_all("a")[2]["href"]
-            date_plop = parse_french_date(cells[2].text.strip())
+            cell_0 = cells[0]  # Cast to Tag
+            ref_link = cell_0.find("a", href=True)
+            if ref_link is None:
+                logging.error("Lien de référence introuvable")
+                continue
+            ref = ref_link.text.strip()
+            
+            cell_1: Tag = cells[1]
+            session_element = cell_1.find("i")
+            if session_element is None:
+                logging.error("Élément de session introuvable")
+                continue
+            session = session_element.text.strip()
+            
+            cell_3: Tag = cells[3]
+            links = cell_3.find_all("a")
+            if len(links) < 3:
+                logging.error("Le nombre de liens attendus ne correspond pas")
+                continue
+            url = links[2]['href']
+            
+            cell_2: Tag = cells[2]
+            date_str = cell_2.text.strip()
+            session_date = parse_french_date(date_str)
+            
+            cell_4: Tag = cells[4]
+            i_tag = cell_4.find("i")
             is_temporary = (
-                True if (
-                    cells[4].find("i").text.strip() == "version provisoire"
-                ) else False
+                True if (i_tag is not None and i_tag.text.strip() == "version provisoire")
+                else False
             )
 
             text_integral = fetch_text_integral_from_url(BASE_URL + url)
@@ -98,7 +115,7 @@ def fetch_minutes_from_web():
             # Création de l'objet Minute
             minute = Minute(
                 ref=ref,
-                date=date_plop.isoformat(),
+                date=session_date.isoformat(),
                 session=session,
                 url=url,
                 is_temporary=is_temporary,
@@ -119,11 +136,6 @@ def fetch_minutes_from_web():
 def main():
     """Point d'entrée principal."""
     logging.info("🚀 Démarrage du job de synchronisation")
-
-    # Vérification de la connexion DB
-    if not check_database_connection():
-        logging.error("❌ Impossible de se connecter à la base de données")
-        exit(1)
 
     try:
         # Récupération des données

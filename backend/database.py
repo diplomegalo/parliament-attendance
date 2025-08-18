@@ -92,16 +92,3 @@ def insert_minutes_bulk(minutes: List):
         """, data)
         
         logging.info(f"Inserted/Updated {len(minutes)} minutes in database")
-
-
-def check_database_connection():
-    """Test database connection."""
-    try:
-        with get_db_cursor() as cursor:
-            cursor.execute("SELECT 1")
-            cursor.fetchone()  # Just test the connection
-            logging.info("Database connection successful")
-            return True
-    except Exception as e:
-        logging.error(f"Database connection failed: {e}")
-        return False
