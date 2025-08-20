@@ -6,7 +6,11 @@ from sync_job import fetch_minutes_from_page
 
 class DummyWebPage:
     def __init__(self):
-        with open("./backend/tests/mock/parliament_page_20250819_144523.html", "r", encoding="utf-8") as f:
+        with open(
+            "./backend/tests/mock/parliament_page_20250819_144523.html",
+            "r",
+            encoding="utf-8"
+        ) as f:
             content = f.read()
             self.str_content = content
             self.soup_content = BeautifulSoup(content, "html.parser")

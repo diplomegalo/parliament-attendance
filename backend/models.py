@@ -6,10 +6,21 @@ meeting record with all its attributes.
 """
 
 from typing import Optional
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Minister:
+    """Represents a government minister."""
+    name: str
+
+    def __repr__(self) -> str:
+        return f"Minister(name='{self.name}')"
+
 
 class Minute:
     """Represents a parliamentary minute (meeting record)."""
-    
+
     def __init__(
         self,
         id: Optional[int] = None,
@@ -22,7 +33,7 @@ class Minute:
     ):
         """
         Initialize a Minute object.
-        
+
         Args:
             id: Database ID (optional, auto-generated)
             ref: Reference identifier for the minute
@@ -53,11 +64,11 @@ class Minute:
             f"is_temporary={self.is_temporary}, "
             f"text_integral='{text_preview}')"
         )
-    
+
     def __str__(self) -> str:
         """Human-readable string representation."""
         return f"Minute {self.ref} - {self.date} ({self.session})"
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
@@ -69,7 +80,7 @@ class Minute:
             'is_temporary': self.is_temporary,
             'text_integral': self.text_integral
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> 'Minute':
         """Create Minute from dictionary."""
