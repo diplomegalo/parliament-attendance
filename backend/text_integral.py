@@ -34,9 +34,8 @@ class TextIntegral:
 
         logging.debug(f"Found detail section: {detail_section}")
 
-        elements = soup.find_all_next(
-            "span",
-            attrs={"lang": re.compile(r"^NL", re.IGNORECASE)}
+        elements = detail_section.parent.find_all_next(
+            "span"
         )
 
         forbiden_tokens = [
@@ -46,11 +45,13 @@ class TextIntegral:
         for element in elements:
             inner_text = element.get_text(separator=" ", strip=True).lower()
             if any(token in inner_text for token in forbiden_tokens):
-                return None
+                continue
+            elif inner_text.strip() == "":
+                continue
             elif inner_text.replace(" ", "").isdigit():
-                return None
+                continue
             elif ":" in inner_text:
-                return None
+                continue
             else:
                 self.ministers.add(Minister(name=inner_text))
 

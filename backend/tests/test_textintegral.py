@@ -12,4 +12,5 @@ class TestTextIntegral(unittest.TestCase):
 
     def test_fetch_minister(self):
         textintegral = TextIntegral("plop", self.text_html)
-        self.assertGreater(len(textintegral.fetch_minister()), 0)
+        result = textintegral.fetch_minister()
+        self.assertGreater(len(result), 0)
