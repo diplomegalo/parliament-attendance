@@ -7,7 +7,6 @@ meeting record with all its attributes.
 
 from typing import Optional
 
-
 class Minute:
     """Represents a parliamentary minute (meeting record)."""
     
