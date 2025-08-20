@@ -1,5 +1,9 @@
 import unittest
-from backend.database import insert_minute, insert_minutes_bulk, minutes_exists
+from backend.database import (
+    insert_minute,
+    insert_minutes_bulk,
+    minute_exists_list,
+)
 
 
 class DummyMinute:
@@ -25,7 +29,7 @@ class TestDatabase(unittest.TestCase):
             minute.ref = f"TST{i+1}"
             minute.url = f"http://example.com/{i+1}"
         insert_minutes_bulk(minutes)
-        self.assertTrue(minutes_exists([minute.ref for minute in minutes]))
+        self.assertTrue(minute_exists_list([minute.ref for minute in minutes]))
 
 
 if __name__ == "__main__":

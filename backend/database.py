@@ -120,11 +120,11 @@ def insert_minutes_bulk(minutes: List):
         logging.info(f"Inserted/Updated {len(minutes)} minutes in database")
 
 
-def minutes_exists(refs: List[str]):
+def minute_exists_list(refs: List[str]):
     """Check if a minute exists in the database by its reference."""
     with get_db_cursor() as cursor:
         formated_str = ",".join(["%s"] * len(refs))
-        query = f"SELECT id FROM minutes WHERE ref IN ({formated_str})"
+        query = f"SELECT ref FROM minutes WHERE ref IN ({formated_str})"
         cursor.execute(query, refs)
         found_ref = {row[0] for row in cursor.fetchall()}
         return all(ref in found_ref for ref in refs)

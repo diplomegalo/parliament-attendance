@@ -51,7 +51,7 @@ def fetch_text_integral_from_url(url):
     return result
 
 
-def fetch_table_from_web():
+def fetch_page_from_web():
     """Récupère et parse les comptes-rendus depuis le web."""
     logging.info("Récupération des données depuis le web...")
 
@@ -60,15 +60,19 @@ def fetch_table_from_web():
         raise Exception(f"Erreur HTTP {response.status_code}")
 
     page = BeautifulSoup(response.text, "html.parser")
+    return page
+
+
+def fetch_minutes_from_page(page):
+    """Récupère l'élément contenant les comptes-rendus depuis la page."""
     table = page.find("table", id="lst")
-    return table
+    if table is None:
+        logging.error("Tableau des comptes-rendus introuvable")
+        raise Exception("Tableau des comptes-rendus introuvable")
 
-
-def fetch_minutes_from_rows(table):
     rows = table.find_all("tr", attrs={"valign": "top"})
-
     if not rows:
-        logging.error("Aucune donnée trouvée")
+        logging.error("Aucun compte rendu trouvé")
         return []
 
     logging.debug(f"{len(rows)} compte-rendu trouvé(s)")
@@ -104,7 +108,10 @@ def fetch_minutes_from_rows(table):
 
             i_tag = cells[4].find("i")
             is_temporary = (
-                True if (i_tag is not None and i_tag.text.strip() == "version provisoire")
+                True if (
+                    i_tag is not None and
+                    i_tag.text.strip() == "version provisoire"
+                )
                 else False
             )
 
@@ -137,9 +144,8 @@ def main():
 
     try:
         # Récupération des données
-        table = fetch_table_from_web()
-        minutes = fetch_minutes_from_rows(table)
-
+        page = fetch_page_from_web()
+        minutes = fetch_minutes_from_page(page)
         insert_minutes_bulk(minutes)
 
     except Exception as e:
