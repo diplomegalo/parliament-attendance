@@ -13,7 +13,7 @@ class DummyWebPage:
 
     def get_str(self):
         return self.str_content
-    
+
     def get_soup(self):
         return self.soup_content
 
