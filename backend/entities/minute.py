@@ -2,22 +2,48 @@ import logging
 import re
 
 from bs4 import BeautifulSoup
+from typing import Optional
+from backend.entities.minister import Minister
 
-from backend.models import Minister
 
-
-class TextIntegral:
+class Minute:
     ministers = set()
 
-    def __init__(self, ref: str, text_html: str):
+    def __init__(
+        self,
+        id: Optional[int] = None,
+        ref: str = "",
+        date: str = "",
+        session: str = "",
+        url: str = "",
+        is_temporary: bool = False,
+        text_integral: str = ""
+    ):
+        """
+        Initialize a Minute object.
+
+        Args:
+            id: Database ID (optional, auto-generated)
+            ref: Reference identifier for the minute
+            date: Date of the parliamentary session
+            session: Session description/name
+            url: URL to the full document
+            is_temporary: Whether this is a temporary/provisional version
+            text_integral: Full text content of the minute
+        """
+        self.id = id
         self.ref = ref
-        self.text_html = text_html
+        self.date = date
+        self.session = session
+        self.url = url
+        self.is_temporary = is_temporary
+        self.text_integral = text_integral
 
     def fetch_minister(self):
-        # Set position to : "DETAIL DES VOTES NOMINATIFS"
-        soup = BeautifulSoup(self.text_html, 'html.parser')
+        soup = BeautifulSoup(self.text_integral, 'html.parser')
 
         # Find the specific section in the HTML
+        # Set position to : "DETAIL DES VOTES NOMINATIFS"
         detail_section = soup.find(
             string=re.compile(
                 r"DETAIL\s+DES\s+VOTES\s+NOMINATIFS", re.IGNORECASE

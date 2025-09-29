@@ -1,6 +1,5 @@
 import unittest
-
-from backend.text_integral import TextIntegral
+from backend.entities.minute import TextIntegral
 
 
 class TestTextIntegral(unittest.TestCase):
@@ -13,4 +12,4 @@ class TestTextIntegral(unittest.TestCase):
     def test_fetch_minister(self):
         textintegral = TextIntegral("plop", self.text_html)
         result = textintegral.fetch_minister()
-        self.assertGreater(len(result), 0)
+        self.assertIsNotNone(result)

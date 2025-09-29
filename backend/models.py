@@ -6,16 +6,6 @@ meeting record with all its attributes.
 """
 
 from typing import Optional
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class Minister:
-    """Represents a government minister."""
-    name: str
-
-    def __repr__(self) -> str:
-        return f"Minister(name='{self.name}')"
 
 
 class Minute:
