@@ -19,6 +19,22 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **Documentation:** Document all modules, classes, and functions. Update AGENT.md and README.md for major changes.
 - **Simplicity First:** Application code must be as simple as possible and purely functional/business-oriented. Infrastructure concerns (cron scheduling, parallelism, async processing, etc.) must NOT be part of the application code. Delegate to external tools (cron, task schedulers, orchestrators) first, or well-established libraries as fallback. Keep application code focused on business logic only.
 
+### Devcontainer Configuration
+**Responsibilities:**
+- Keep `.devcontainer/devcontainer.json` up-to-date with project needs (Python, Docker, PostgreSQL, etc.)
+- Ensure all required VS Code extensions are listed and relevant settings are configured
+- Maintain correct `dockerComposeFile` and service mappings for backend/frontend/database
+- Forward necessary ports (e.g., 5432 for PostgreSQL) and document their use
+- Add or update VS Code settings for Python linting, formatting, and environment management
+- Ensure `postCreateCommand` installs all backend dependencies reliably
+
+**Conventions:**
+- Use only approved features and extensions
+- Prefer official or well-supported devcontainer features
+- Keep configuration minimal but sufficient for all workflows (backend, database, testing)
+- Use business-oriented naming for services and folders
+- Document all changes and rationale in AGENT.md
+
 ## Integration & Data Flow
 - **Batch job:** Runs monthly, triggers scraping, parsing, and DB update.
 - **Storage:** Abstract storage layer; configurable backend (S3, Azure, local).
@@ -85,19 +101,29 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 
 ## Examples
 - Scraping: `python backend/sync_job.py` (monthly batch)
-- Testing: `pytest backend/tests/` (all business logic)
+- Testing: `cd backend && python -m unittest discover -s tests -v` (all tests)
 - Devcontainer: Launch VS Code in devcontainer for consistent environment
+- Update Python dependencies: Edit `postCreateCommand` in `.devcontainer/devcontainer.json`
+- Add VS Code extension: List in `customizations.vscode.extensions` and request approval
+- Forward a new port: Add to `forwardPorts` and explain its purpose
 
 ## Agent Guidance
 - Use business terms for all class/function names (e.g., `MinisterAttendanceCalculator`, `SessionVoteParser`).
 - Document all new features and architectural decisions in both AGENT.md and README.md.
 - **Always update README.md** when implementing significant features or architectural changes.
 - Propose SSG frontend options if not specified.
-- Request approval for new dependencies before adding.
+- Request approval for new dependencies or devcontainer features/extensions before adding.
 - Ask for clarification if requirements or conventions are unclear.
+- For devcontainer changes: propose improvements for efficiency, reproducibility, or developer experience.
 
 ## Project Philosophy
 **This is a vibe coding project.** Development is guided by intuition, experimentation, and practical results rather than rigid planning. The architecture emerged organically through iterative refinement while maintaining clean code principles.
+
+### Python Environment
+- **Dev Container:** Uses system Python with optional venv for IDE features
+- **Virtual Environment:** Optional `.venv/` for VS Code IntelliSense/autocomplete
+- **Deployment:** Azure Functions manages Python environment automatically from `requirements.txt`
+- **Testing:** Run tests with `python -m unittest discover -s backend/tests` (from workspace root)
 
 ---
 For further details, consult AGENT.md, README.md, or ask for clarification.

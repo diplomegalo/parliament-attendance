@@ -34,9 +34,22 @@ parliament-attendance/
 
 ## Installation
 
+### Dev Container (Recommended)
+This project uses a dev container for consistent development environment. Open in VS Code and select "Reopen in Container" when prompted.
+
 ### Backend (Python)
+
+#### With Virtual Environment (Recommended)
 ```bash
-cd backend
+# Create virtual environment
+python -m venv .venv
+
+# Activate it
+source .venv/bin/activate  # Linux/Mac
+# or
+.venv\Scripts\activate  # Windows
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 

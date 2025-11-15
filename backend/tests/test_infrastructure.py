@@ -6,6 +6,7 @@ Tests the actual implementations against real data (mocked HTML).
 
 import unittest
 from datetime import datetime
+from pathlib import Path
 from bs4 import BeautifulSoup
 
 from infrastructure.web_scraper import ParliamentaryWebScraper
@@ -17,11 +18,11 @@ class TestParliamentaryWebScraper(unittest.TestCase):
     
     def setUp(self):
         """Load mock HTML page."""
-        with open(
-            "./backend/tests/mock/parliament_page_20250819_144523.html",
-            "r",
-            encoding="utf-8"
-        ) as f:
+        # Use absolute path relative to this file's location
+        test_dir = Path(__file__).parent
+        mock_file = test_dir / "mock" / "parliament_page_20250819_144523.html"
+        
+        with open(mock_file, "r", encoding="utf-8") as f:
             self.mock_html = f.read()
         
         self.scraper = ParliamentaryWebScraper()

@@ -20,11 +20,13 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         self.session_repo = Mock()
         self.minute_repo = Mock()
         self.content_retriever = Mock()
+        self.content_storage = Mock()
         
         self.use_case = SynchronizeMinutesUseCase(
             session_metadata_repo=self.session_repo,
             minute_repo=self.minute_repo,
-            content_retriever=self.content_retriever
+            content_retriever=self.content_retriever,
+            content_storage=self.content_storage
         )
     
     def test_execute_with_no_sessions(self):
@@ -50,6 +52,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         
         self.session_repo.retrieve_all_sessions.return_value = [provisional_metadata]
         self.content_retriever.retrieve_content.return_value = "<html>Content</html>"
+        self.content_storage.store_content.return_value = "storage/PROV001.html"
         
         # Execute
         self.use_case.execute()
@@ -86,6 +89,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         # DEF001 exists, DEF002 doesn't
         self.minute_repo.find_existing_references.return_value = {"DEF001"}
         self.content_retriever.retrieve_content.return_value = "<html>Content</html>"
+        self.content_storage.store_content.return_value = "storage/DEF002.html"
         
         # Execute
         self.use_case.execute()
@@ -128,7 +132,10 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         ]
         
         self.minute_repo.find_existing_references.return_value = {"DEF001"}
-        self.content_retriever.retrieve_content.return_value = "<html>Content</html>"
+        self.content_retriever.retrieve_content.return_value = (
+            "<html>Content</html>"
+        )
+        self.content_storage.store_content.return_value = "storage/key.html"
         
         # Execute
         self.use_case.execute()
@@ -166,6 +173,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             Exception("Network error"),
             "<html>Content</html>"
         ]
+        self.content_storage.store_content.return_value = "storage/S002.html"
         
         # Execute
         self.use_case.execute()
