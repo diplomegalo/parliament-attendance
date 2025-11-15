@@ -18,9 +18,10 @@
 		"SSH_AUTH_SOCK": "/tmp/ssh-agent.sock"
 	},
 
-	// Mount SSH agent socket
+	// Mount SSH agent socket and SSH keys
 	"mounts": [
-		"source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock,type=bind"
+		"source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock,type=bind",
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached,readonly"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
