@@ -85,7 +85,7 @@ class MemberNameMatcher:
                 
                 if score > best_score:
                     best_score = score
-                    best_match = member["id"]
+                    best_match = member["member_id"]  # Use member_id not id
         
         # Return match only if above threshold
         if best_score >= min_threshold:
@@ -134,7 +134,7 @@ class MemberNameMatcher:
             
             if best_score >= min_score:
                 matches.append((
-                    member["id"],
+                    member["member_id"],  # Use member_id not id
                     member["full_name"],
                     best_score
                 ))

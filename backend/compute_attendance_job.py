@@ -113,7 +113,16 @@ def compute_attendance_for_minute(
             legislature=legislature
         )
         
-        # 4. Report statistics
+        # 4. Save to database
+        if attendances:
+            attendance_repo = PostgreSQLAttendanceRepository()
+            saved_count = attendance_repo.save_batch_from_dicts(
+                attendances,
+                legislature
+            )
+            print(f"💾 Saved {saved_count} attendance records to database")
+        
+        # 5. Report statistics
         print(f"\n{'='*80}")
         print(f"📊 RESULTS FOR MINUTE {minute_ref}")
         print(f"{'='*80}")
@@ -121,7 +130,9 @@ def compute_attendance_for_minute(
         
         if attendances:
             spoke_count = sum(1 for a in attendances if a['spoke'])
-            avg_confidence = sum(a['confidence'] for a in attendances) / len(attendances)
+            avg_confidence = (
+                sum(a['confidence'] for a in attendances) / len(attendances)
+            )
             print(f"Members who spoke: {spoke_count}")
             print(f"Average confidence: {avg_confidence:.2f}")
         

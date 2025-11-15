@@ -7,6 +7,8 @@ Implements attendance data persistence using PostgreSQL.
 import psycopg2
 from typing import List, Optional
 from psycopg2.extras import execute_batch
+from contextlib import contextmanager
+import os
 from domain.repositories import IAttendanceRepository
 from domain.entities import MemberPresence
 
@@ -18,18 +20,33 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
     Handles CRUD operations for member presence records.
     """
     
-    def __init__(self, connection_string: str):
+    def __init__(self):
         """
-        Initialize repository with database connection.
-        
-        Args:
-            connection_string: PostgreSQL connection string
+        Initialize repository with database connection from environment.
         """
-        self.connection_string = connection_string
+        self.connection_params = {
+            'host': os.getenv('DB_HOST', 'localhost'),
+            'database': os.getenv('DB_NAME', 'parliament'),
+            'user': os.getenv('DB_USER', 'postgres'),
+            'password': os.getenv('DB_PASSWORD', ''),
+            'port': os.getenv('DB_PORT', '5432')
+        }
+    
+    @contextmanager
+    def _get_connection(self):
+        """Context manager for database connections."""
+        conn = psycopg2.connect(**self.connection_params)
+        try:
+            yield conn
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
     
     def save(self, presence: MemberPresence) -> MemberPresence:
         """Save a member presence record."""
-        with psycopg2.connect(self.connection_string) as conn:
+        with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
@@ -67,7 +84,7 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
         if not presences:
             return []
         
-        with psycopg2.connect(self.connection_string) as conn:
+        with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 # Prepare data for batch insert
                 data = [
@@ -125,7 +142,7 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
         legislature: Optional[int] = None
     ) -> List[MemberPresence]:
         """Find all attendance records for a session."""
-        with psycopg2.connect(self.connection_string) as conn:
+        with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 if legislature is not None:
                     cursor.execute(
@@ -169,7 +186,7 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
         legislature: int
     ) -> List[MemberPresence]:
         """Find all attendance records for a member."""
-        with psycopg2.connect(self.connection_string) as conn:
+        with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
@@ -197,7 +214,7 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
     
     def delete_by_session(self, session_ref: str) -> int:
         """Delete all attendance records for a session."""
-        with psycopg2.connect(self.connection_string) as conn:
+        with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
@@ -210,3 +227,57 @@ class PostgreSQLAttendanceRepository(IAttendanceRepository):
                 conn.commit()
         
         return deleted
+    
+    def save_batch_from_dicts(
+        self,
+        attendance_dicts: List[dict],
+        legislature: int
+    ) -> int:
+        """
+        Save attendance records from parser dict format.
+        
+        Args:
+            attendance_dicts: List of dicts from LLM parser with keys:
+                             member_id, session_ref, spoke, confidence
+            legislature: Legislature number to add to records
+            
+        Returns:
+            Number of records saved
+        """
+        if not attendance_dicts:
+            return 0
+        
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                # Prepare data for batch insert
+                data = [
+                    (
+                        att['member_id'],
+                        att['session_ref'],
+                        legislature,
+                        att['spoke'],
+                        1 if att['spoke'] else 0,  # interventions_count
+                        att['confidence']
+                    )
+                    for att in attendance_dicts
+                ]
+                
+                execute_batch(
+                    cursor,
+                    """
+                    INSERT INTO attendance
+                        (member_id, session_ref, legislature, spoke,
+                         interventions_count, confidence_score)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (member_id, session_ref)
+                    DO UPDATE SET
+                        spoke = EXCLUDED.spoke,
+                        interventions_count = EXCLUDED.interventions_count,
+                        confidence_score = EXCLUDED.confidence_score,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    data
+                )
+                conn.commit()
+        
+        return len(attendance_dicts)
