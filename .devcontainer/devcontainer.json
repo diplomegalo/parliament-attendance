@@ -12,7 +12,11 @@
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "enableNonRootDocker": "true"
     },
-    "ghcr.io/devcontainers/features/sshd:1": {}
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    "ghcr.io/devcontainers/features/postgres:1": {
+      "version": "latest",
+      "installPostgresClient": true
+    }
   },
 
 	// Mount SSH keys for Git authentication
