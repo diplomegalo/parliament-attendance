@@ -1,1 +1,0 @@
-from .EmptyMinisterNameError import EmptyMinisterNameError

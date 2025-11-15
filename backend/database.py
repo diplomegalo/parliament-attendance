@@ -120,11 +120,22 @@ def insert_minutes_bulk(minutes: List):
         logging.info(f"Inserted/Updated {len(minutes)} minutes in database")
 
 
-def minute_exists_list(refs: List[str]):
-    """Check if a minute exists in the database by its reference."""
+def minute_exists_list(refs: List[str]) -> set:
+    """
+    Check which minutes exist in the database by their references.
+    
+    Args:
+        refs: List of minute references to check
+        
+    Returns:
+        Set of references that exist in the database
+    """
+    if not refs:
+        return set()
+    
     with get_db_cursor() as cursor:
         formated_str = ",".join(["%s"] * len(refs))
         query = f"SELECT ref FROM minutes WHERE ref IN ({formated_str})"
         cursor.execute(query, refs)
         found_ref = {row[0] for row in cursor.fetchall()}
-        return all(ref in found_ref for ref in refs)
+        return found_ref

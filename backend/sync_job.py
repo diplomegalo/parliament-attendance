@@ -1,157 +1,90 @@
 #!/usr/bin/env python3
 """
-Job de synchronisation des données parlementaires.
-Script simple qui scrape, parse et sauvegarde en DB.
+Parliamentary Minute Synchronization - Main Entry Point.
+
+This script sets up the dependency injection and executes the
+synchronization use case following clean architecture principles.
 """
 
-import requests
 import logging
-from datetime import datetime
-from bs4 import BeautifulSoup
-from models import Minute
-from database import insert_minutes_bulk
+import sys
+import os
 
-# Configuration des logs
+from application.use_cases import SynchronizeMinutesUseCase
+from infrastructure.web_scraper import ParliamentaryWebScraper
+from infrastructure.database_repository import PostgresMinuteRepository
+from infrastructure.local_file_storage import LocalFileSystemStorage
+from infrastructure.azure_blob_storage import AzureBlobStorage
+
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-BASE_URL = "https://www.lachambre.be"
 
-# URL de la page à scraper
-PAGE_URL = (
-    BASE_URL + "/kvvcr/showpage.cfm?"
-    "section=/cricra&language=fr&cfm=dcricra.cfm?"
-    "type=plen&cricra=CRI&count=all&legislat=56"
-)
-
-
-def parse_french_date(date_str):
-    jour, mois, annee = date_str.split(" ", 2)
-    mois_fr = {
-        'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4, 'mai': 5, 'juin': 6,
-        'juillet': 7, 'août': 8, 'septembre': 9, 'octobre': 10, 'novembre': 11,
-        'décembre': 12
-    }
-
-    return datetime(int(annee), mois_fr[mois.lower()], int(jour))
-
-
-def fetch_text_integral_from_url(url):
-    logging.debug(f"Récupération du text intégral depuis {url}...")
-
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Erreur HTTP {response.status_code}")
-
-    result = response.text
-    logging.debug(f"Taille du texte du compte rendu intégral : {len(result)}")
-
-    return result
-
-
-def fetch_page_from_web():
-    """Récupère et parse les comptes-rendus depuis le web."""
-    logging.info("Récupération des données depuis le web...")
-
-    response = requests.get(PAGE_URL)
-    if response.status_code != 200:
-        raise Exception(f"Erreur HTTP {response.status_code}")
-
-    page = BeautifulSoup(response.text, "html.parser")
-    return page
-
-
-def fetch_minutes_from_page(page):
-    """Récupère l'élément contenant les comptes-rendus depuis la page."""
-    table = page.find("table", id="lst")
-    if table is None:
-        logging.error("Tableau des comptes-rendus introuvable")
-        raise Exception("Tableau des comptes-rendus introuvable")
-
-    rows = table.find_all("tr", attrs={"valign": "top"})
-    if not rows:
-        logging.error("Aucun compte rendu trouvé")
-        return []
-
-    logging.debug(f"{len(rows)} compte-rendu trouvé(s)")
-
-    minutes = []
-    for row in rows:
-        cells = row.find_all("td")
-        if len(cells) < 5:
-            logging.error("Le nombre de cellule attendue ne correspond pas")
-            continue
-
-        try:
-            ref_link = cells[0].find("a")
-            if ref_link is None:
-                logging.error("Lien de référence introuvable")
-                continue
-            ref = ref_link.text.strip()
-
-            session_element = cells[1].find("i")
-            if session_element is None:
-                logging.error("Élément de session introuvable")
-                continue
-            session = session_element.text.strip()
-
-            links = cells[3].find_all("a")
-            if len(links) < 3:
-                logging.error("Le nombre de liens attendus ne correspond pas")
-                continue
-            url = links[2]['href']
-
-            date_str = cells[2].text.strip()
-            session_date = parse_french_date(date_str)
-
-            i_tag = cells[4].find("i")
-            is_temporary = (
-                True if (
-                    i_tag is not None and
-                    i_tag.text.strip() == "version provisoire"
-                )
-                else False
-            )
-
-            text_integral = fetch_text_integral_from_url(BASE_URL + url)
-
-            # Création de l'objet Minute
-            minute = Minute(
-                ref=ref,
-                date=session_date.isoformat(),
-                session=session,
-                url=url,
-                is_temporary=is_temporary,
-                text_integral=text_integral
-            )
-
-            minutes.append(minute)
-            logging.debug(f"Minute récupérée: {minute}")
-
-        except Exception as e:
-            logging.warning(f"Erreur lors du parsing d'une ligne: {e}")
-            continue
-
-    logging.info(f"✅ {len(minutes)} comptes-rendus récupérés")
-    return minutes
+def create_content_storage():
+    """
+    Create appropriate content storage based on environment.
+    
+    Development: Uses local filesystem storage
+    Production: Uses Azure Blob Storage
+    
+    Returns:
+        IContentStorage implementation
+    """
+    logger = logging.getLogger(__name__)
+    storage_type = os.getenv('CONTENT_STORAGE', 'local').lower()
+    
+    if storage_type == 'azure':
+        logger.info("Initializing Azure Blob Storage for content")
+        connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+        container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'minutes')
+        return AzureBlobStorage(connection_string, container_name)
+    else:
+        logger.info("Initializing Local File System Storage for content")
+        storage_path = os.getenv('LOCAL_STORAGE_PATH', './data/minutes')
+        return LocalFileSystemStorage(storage_path)
 
 
 def main():
-    """Point d'entrée principal."""
-    logging.info("🚀 Démarrage du job de synchronisation")
-
+    """
+    Main entry point - Dependency Injection and Use Case Execution.
+    
+    Sets up infrastructure adapters and executes the synchronization
+    use case following clean architecture and dependency inversion principles.
+    
+    Environment Variables:
+        CONTENT_STORAGE: 'local' (default) or 'azure'
+        LOCAL_STORAGE_PATH: Path for local storage (default: ./data/minutes)
+        AZURE_STORAGE_CONNECTION_STRING: Azure connection string (required for azure)
+        AZURE_STORAGE_CONTAINER: Azure container name (default: minutes)
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("🚀 Starting parliamentary minute synchronization")
+    
     try:
-        # Récupération des données
-        page = fetch_page_from_web()
-        minutes = fetch_minutes_from_page(page)
-        insert_minutes_bulk(minutes)
-
+        # Infrastructure layer - adapters for external systems
+        web_scraper = ParliamentaryWebScraper()
+        database_repo = PostgresMinuteRepository()
+        content_storage = create_content_storage()
+        
+        # Application layer - use case with injected dependencies
+        use_case = SynchronizeMinutesUseCase(
+            session_metadata_repo=web_scraper,
+            minute_repo=database_repo,
+            content_retriever=web_scraper,
+            content_storage=content_storage
+        )
+        
+        # Execute business logic
+        use_case.execute()
+        
+        logger.info("✅ Synchronization completed successfully")
+        
     except Exception as e:
-        logging.error(f"❌ Erreur durant la synchronisation: {e}")
-        exit(1)
-    logging.info("✅ Synchronisation terminée avec succès")
+        logger.error(f"❌ Synchronization failed: {e}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
