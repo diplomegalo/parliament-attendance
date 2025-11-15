@@ -17,21 +17,35 @@ class MinuteTextCleaner:
     preserving the essential content structure for AI parsing.
     """
     
-    def extract_text(self, html_content: str) -> str:
+    def extract_text(
+        self,
+        html_content: str,
+        extract_votes_only: bool = False
+    ) -> Optional[str]:
         """
         Extract clean text from HTML minute content.
         
         Args:
             html_content: Raw HTML from parliamentary minute
+            extract_votes_only: If True, extract only voting sections.
+                               Returns None if no votes found.
             
         Returns:
-            Clean text suitable for AI processing
+            Clean text suitable for AI processing, or None if
+            extract_votes_only=True and no voting sections found
             
         Raises:
             ValueError: If html_content is empty or invalid
         """
         if not html_content or not html_content.strip():
             raise ValueError("HTML content cannot be empty")
+        
+        # Filter to voting sections if requested
+        if extract_votes_only:
+            filtered_html = self._filter_to_voting_sections(html_content)
+            if filtered_html is None:
+                return None
+            html_content = filtered_html
         
         soup = BeautifulSoup(html_content, 'html.parser')
         
@@ -99,6 +113,72 @@ class MinuteTextCleaner:
         text = re.sub(r' +', ' ', text)
         
         return text.strip()
+    
+    def _filter_to_voting_sections(self, html_content: str) -> Optional[str]:
+        """
+        Filter HTML to include only voting sections.
+        
+        Searches for the earliest occurrence of vote-related markers:
+        - "Stemming/vote N" (vote results)
+        - "Naamstemming - Vote nominatif: N" (nominal votes)
+        - "DETAIL VAN DE NAAMSTEMMINGEN" (Dutch detail section)
+        - "DETAIL DES VOTES NOMINATIFS" (French detail section)
+        
+        Returns all HTML content from that point onward, preserving:
+        - Vote titles and numbers
+        - Voting process text
+        - Vote results tables
+        - Member name lists
+        - Both Dutch and French bilingual content
+        
+        Args:
+            html_content: Raw HTML from parliamentary minute
+            
+        Returns:
+            Filtered HTML containing only voting sections,
+            or None if no voting markers found
+        """
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Vote marker patterns (case-insensitive, flexible spacing)
+        vote_patterns = [
+            re.compile(r'Stemming/vote\s+\d+', re.IGNORECASE),
+            re.compile(r'Naamstemming.*Vote nominatif', re.IGNORECASE),
+            re.compile(r'DETAIL VAN DE NAAMSTEMMINGEN', re.IGNORECASE),
+            re.compile(r'DETAIL DES VOTES NOMINATIFS', re.IGNORECASE)
+        ]
+        
+        # Find all elements that could contain vote markers
+        all_elements = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div'])
+        
+        # Search for the first occurrence of any vote marker
+        first_vote_element = None
+        for element in all_elements:
+            text = element.get_text(strip=True)
+            for pattern in vote_patterns:
+                if pattern.search(text):
+                    first_vote_element = element
+                    break
+            if first_vote_element:
+                break
+        
+        # No voting sections found
+        if not first_vote_element:
+            return None
+        
+        # Create new soup with filtered content
+        # Extract all siblings after (and including) the first vote element
+        filtered_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
+        body = filtered_soup.body
+        
+        # Add the first vote element and all following siblings
+        current = first_vote_element
+        while current:
+            # Clone and append the element
+            body.append(current.__copy__())
+            current = current.find_next_sibling()
+        
+        return str(filtered_soup)
     
     def extract_main_content(
         self,

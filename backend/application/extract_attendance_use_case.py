@@ -101,8 +101,19 @@ class ExtractAttendanceUseCase:
                 f"Content not found for minute {session_ref}"
             )
         
-        # Clean HTML to extract text
-        minute_text = self.text_cleaner.extract_text(html_content)
+        # Clean HTML to extract text (with vote filtering enabled by default)
+        minute_text = self.text_cleaner.extract_text(
+            html_content,
+            extract_votes_only=True
+        )
+        
+        # Skip processing if no voting sections found
+        if minute_text is None:
+            print(
+                f"ℹ️  No voting sections found in minute {session_ref}. "
+                "Skipping attendance extraction."
+            )
+            return []
         
         # Orchestrate storage: content in storage, metadata in DB
         # Step 1: Store cleaned text content in storage
@@ -119,7 +130,7 @@ class ExtractAttendanceUseCase:
             minute_ref=session_ref,
             content_storage_key=storage_key,
             text_hash=text_hash,
-            cleaning_method="html_strip_v1"
+            cleaning_method="html_strip_voting_v1"
         )
         
         # Step 4: Save metadata to database

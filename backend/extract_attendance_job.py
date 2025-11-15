@@ -38,6 +38,8 @@ def main():
         LEGISLATURE: Legislature number to process (default: 56)
         MINUTE_REF: Specific minute to process
                     (optional, processes all if not set)
+        EXTRACT_VOTES_ONLY: 'true' (default) or 'false'
+                           Extract only voting sections to reduce tokens
         CONTENT_STORAGE: 'local' (default) or 'azure'
         LOCAL_STORAGE_PATH: Path for local storage
                            (default: ./data/minutes)
@@ -49,6 +51,7 @@ def main():
     # Get parameters from environment
     legislature = int(os.getenv('LEGISLATURE', '56'))
     minute_ref = os.getenv('MINUTE_REF')
+    extract_votes_only = os.getenv('EXTRACT_VOTES_ONLY', 'true').lower() == 'true'
     
     if minute_ref:
         logger.info(
@@ -60,6 +63,11 @@ def main():
             f"🚀 Starting text cleaning for all minutes "
             f"(legislature {legislature})"
         )
+    
+    if extract_votes_only:
+        logger.info("📊 Vote extraction mode: Only voting sections will be extracted")
+    else:
+        logger.info("📄 Full text mode: Complete minutes will be extracted")
     
     try:
         # Infrastructure layer - adapters for external systems
@@ -98,7 +106,17 @@ def main():
             )
             
             # 2. Clean HTML to text
-            cleaned_text = text_cleaner.extract_text(html_content)
+            cleaned_text = text_cleaner.extract_text(
+                html_content,
+                extract_votes_only=extract_votes_only
+            )
+            
+            if cleaned_text is None:
+                logger.warning(
+                    f"⚠️  No voting sections found in minute {minute_ref}. Skipping."
+                )
+                return
+            
             logger.info(
                 f"Cleaned text: {len(cleaned_text)} characters"
             )
@@ -115,11 +133,12 @@ def main():
             logger.info(f"Computed hash: {text_hash[:16]}...")
             
             # 5. Create metadata entity
+            cleaning_method = "html_strip_voting_v1" if extract_votes_only else "html_strip_v1"
             metadata = CleanedMinuteText.create(
                 minute_ref=minute_ref,
                 content_storage_key=storage_key,
                 text_hash=text_hash,
-                cleaning_method="html_strip_v1"
+                cleaning_method=cleaning_method
             )
             
             # 6. Save metadata to database
@@ -164,7 +183,19 @@ def main():
                     )
                     
                     # 2. Clean HTML
-                    cleaned_text = text_cleaner.extract_text(html_content)
+                    cleaned_text = text_cleaner.extract_text(
+                        html_content,
+                        extract_votes_only=extract_votes_only
+                    )
+                    
+                    # Skip if no voting sections found
+                    if cleaned_text is None:
+                        logger.warning(
+                            f"⚠️  No voting sections found in minute "
+                            f"{minute.get_reference()}. Skipping."
+                        )
+                        skipped += 1
+                        continue
                     
                     # 3. Store cleaned text
                     storage_key = content_storage.store_content(
@@ -176,11 +207,12 @@ def main():
                     text_hash = CleanedMinuteText.compute_hash(cleaned_text)
                     
                     # 5. Create metadata
+                    cleaning_method = "html_strip_voting_v1" if extract_votes_only else "html_strip_v1"
                     metadata = CleanedMinuteText.create(
                         minute_ref=minute.get_reference(),
                         content_storage_key=storage_key,
                         text_hash=text_hash,
-                        cleaning_method="html_strip_v1"
+                        cleaning_method=cleaning_method
                     )
                     
                     # 6. Save metadata
