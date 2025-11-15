@@ -75,6 +75,9 @@ DB_USER=postgres
 DB_PASSWORD=password
 DB_PORT=5432
 
+# Legislature (default: 56)
+LEGISLATURE=56
+
 # Content Storage ('local' or 'azure')
 CONTENT_STORAGE=local
 
@@ -85,16 +88,31 @@ AZURE_STORAGE_CONTAINER_NAME=parliamentary-minutes
 
 ## Utilisation
 
-### Backend - Lancer le job de synchronisation
+### Synchronisation avec vérification prérequis membres
+
+Le job de synchronisation vérifie automatiquement si les membres existent pour la législature avant de traiter les minutes.
+
+**Processus en deux étapes :**
+1. **Étape 1 : Vérification/Scraping des membres** (prérequis)
+   - Si membres existent → Continue directement
+   - Si absents → Scrape automatiquement depuis `lachambre.be`
+2. **Étape 2 : Synchronisation des comptes rendus**
+
 ```bash
+# Législature par défaut (56)
 cd backend
 python sync_job.py
+
+# Législature personnalisée
+LEGISLATURE=57 python sync_job.py
 ```
 
 ### Backend - Lancer les tests
 ```bash
 cd backend
 pytest tests/
+# ou test d'intégration rapide
+python test_integration_flow.py
 ```
 
 ### Frontend - Mode développement
@@ -108,11 +126,17 @@ _(Frontend SSG à implémenter)_
 
 ### Backend (Implémenté)
 - **Architecture Clean** : Séparation Domain/Application/Infrastructure
-- **Scraping web** : Récupère automatiquement les comptes rendus du Parlement belge (Législature 56)
+- **Vérification prérequis membres** : Vérifie automatiquement l'existence de la liste des membres avant traitement
+- **Scraping automatique membres** : Si absents, scrape depuis `lachambre.be` et sauvegarde
+- **Multi-législature** : Support pour différentes législatures via variable `LEGISLATURE`
+- **Scraping web** : Récupère automatiquement les comptes rendus du Parlement belge
 - **Stockage flexible** : Abstraction pour filesystem local (dev) ou Azure Blob Storage (prod)
-- **Base de données** : PostgreSQL pour les métadonnées, contenu HTML séparé
+- **Base de données** : PostgreSQL pour métadonnées (minutes + membres), contenu HTML séparé
 - **Tests complets** : Tests unitaires (domain), tests d'intégration (infrastructure), mocks (use cases)
 - **Idempotence** : Gestion des versions provisoires vs définitives
+- **Deux cas d'usage distincts** :
+  - `SynchronizeMembersUseCase` : Gestion liste des membres
+  - `SynchronizeMinutesUseCase` : Gestion des comptes rendus
 
 ### Frontend (À venir)
 - **SSG** : Site statique généré mensuellement (Astro, Next.js SSG, ou Hugo)
@@ -131,8 +155,24 @@ Le projet suit les principes de Clean Architecture et DDD tout en restant simple
 
 ### Couches
 1. **Domain** : Logique métier pure, aucune dépendance externe
+   - Entités : `SessionMetadata`, `ParliamentaryMinute`
+   - Interfaces : `IMemberRepository`, `IMemberScraper`, `IMinuteRepository`, `IContentStorage`
 2. **Application** : Cas d'usage orchestrant les règles métier
+   - `SynchronizeMembersUseCase` : Vérification/scraping prérequis membres
+   - `SynchronizeMinutesUseCase` : Synchronisation des comptes rendus
 3. **Infrastructure** : Adaptateurs pour base de données, web scraping, stockage
+   - `PostgresMemberRepository`, `PostgresMinuteRepository`
+   - `ChamberMemberScraper`, `ParliamentaryWebScraper`
+   - `LocalFileSystemStorage`, `AzureBlobStorage`
+
+### Flux d'exécution (sync_job.py)
+```
+1. Lire LEGISLATURE depuis env (défaut: 56)
+2. Étape 1: SynchronizeMembersUseCase
+   └─> has_members? → Oui: Skip | Non: Scrape + Save
+3. Étape 2: SynchronizeMinutesUseCase(legislature)
+   └─> Retrieve → Filter → Get content → Save
+```
 
 Consulter `.github/AGENT.md` pour les détails d'implémentation et décisions architecturales.
 

@@ -4,12 +4,15 @@
 Create a resilient, idempotent web application to retrieve and analyze true attendance of Belgian ministers in parliament sessions. Backend in Python (clean architecture, TDD, DDD, business naming). Frontend should use SSG (suggest: Astro, Next.js SSG, or Hugo) and update monthly. Use devcontainer for development environment.
 
 ## Main Scenario
-1. **Batch Scraping:** Monthly job scrapes parliamentary minutes (provisoire/definitive). Only "provisoire" versions are recalculated/replaced; "definitive" are immutable.
-2. **Storage:** Save minutes in convenient, scalable storage (suggest: S3, Azure Blob, or local filesystem; configurable).
-3. **Parsing:** Extract ministers' names and votes from minutes. Register votes per session.
-4. **Attendance Calculation:** Count each minister's presence/absence. Calculate % attendance.
-5. **KPI Generation:** Output list of ministers, attendance %, and vote topics for web app.
-6. **Web App:** SSG frontend displays KPIs, minister selection, and vote details.
+1. **Member List Prerequisite:** Before processing minutes, check if member list exists for target legislature. If not, automatically scrape and save member list from parliament URL.
+2. **Member List Scraping:** Scrape and maintain official member list per legislature from parliament URL. Members are unique per legislature and list is static during legislature period.
+3. **Batch Scraping:** Monthly job scrapes parliamentary minutes (provisoire/definitive). Only "provisoire" versions are recalculated/replaced; "definitive" are immutable.
+4. **Storage:** Save minutes in convenient, scalable storage (suggest: S3, Azure Blob, or local filesystem; configurable).
+5. **Parsing:** Extract member names and votes from minutes. Match against official member list. Register votes per session.
+6. **Minister Identification:** Ministers are members with special status/role. Associate minister status to members.
+7. **Attendance Calculation:** Count each member's (especially ministers') presence/absence. Calculate % attendance.
+8. **KPI Generation:** Output list of members/ministers, attendance %, and vote topics for web app.
+9. **Web App:** SSG frontend displays KPIs, member/minister selection, and vote details.
 
 ## Architecture & Conventions
 - **Backend:** Python, clean architecture, TDD, DDD, business-oriented naming. All logic in domain/service layers. Tests required for all business logic.
@@ -69,18 +72,24 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 ### Clean Architecture Layers
 **Domain Layer** (`backend/domain/`):
 - Pure business entities: `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
-- Repository interfaces (ports): `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`, `IContentStorage`
+- Repository interfaces (ports): `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`, `IContentStorage`, `IMemberRepository`, `IMemberScraper`
 - No external dependencies, only Python standard library
 
 **Application Layer** (`backend/application/`):
-- Use cases orchestrate business workflows: `SynchronizeMinutesUseCase`
+- Use cases orchestrate business workflows:
+  - `SynchronizeMembersUseCase`: Ensures member data exists for legislature (prerequisite check)
+  - `SynchronizeMinutesUseCase`: Retrieves and stores parliamentary minutes for a legislature
 - Depend only on domain interfaces, not concrete implementations
-- Handle business rules like "don't overwrite definitive minutes"
+- Handle business rules like "don't overwrite definitive minutes" and "members must exist before processing minutes"
 
 **Infrastructure Layer** (`backend/infrastructure/`):
-- Concrete implementations (adapters): `ParliamentaryWebScraper`, `PostgresMinuteRepository`, `LocalFileSystemStorage`, `AzureBlobStorage`
+- Concrete implementations (adapters): `ParliamentaryWebScraper`, `PostgresMinuteRepository`, `PostgresMemberRepository`, `ChamberMemberScraper`, `LocalFileSystemStorage`, `AzureBlobStorage`
+- Web scraper accepts legislature parameter and dynamically constructs URLs
 - External dependencies: `psycopg2`, `beautifulsoup4`, `requests`, `azure-storage-blob`
-- Main entry point (`sync_job.py`) wires dependencies together
+- Main entry point (`sync_job.py`) wires dependencies together and executes two-step process:
+  1. Member synchronization (prerequisite)
+  2. Minute synchronization (with legislature parameter)
+  3. Passes legislature to web scraper for URL construction
 
 ### Testing Strategy
 - **Domain Tests** (`test_domain_entities.py`): Pure unit tests, no mocks needed
@@ -93,6 +102,41 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **Document Types:** Provisoire (provisional) and Définitif (definitive) minutes
 - **Source:** Belgian Federal Parliament website
 - **Update Strategy:** Provisional minutes can be updated/replaced; definitive are immutable
+- **Multi-Legislature Support:** Web scraper accepts legislature parameter and constructs URLs dynamically
+- **URL Template:** `https://www.lachambre.be/kvvcr/showpage.cfm?section=/cricra&language=fr&cfm=dcricra.cfm?type=plen&cricra=CRI&count=all&legislat={legislature}`
+
+### Members & Ministers Management
+**Domain Rules:**
+- **Prerequisite Check:** Member list must exist for a legislature before processing its minutes
+- **Auto-Scraping:** If member list doesn't exist, system automatically scrapes and saves it
+- **Members:** Parliamentary members list retrieved from parliament URL and scrapped
+- **Legislature Association:** Members are associated to a legislature (same as minutes)
+- **Uniqueness:** A member is unique per legislature (cannot be member twice for same legislature)
+- **Minister Status:** A minister is a member with special status/role attribute
+- **Static List:** Member list doesn't change during a legislature (only updated when scraped)
+- **Database Schema:** Members stored with `member_id`, `legislature`, `full_name`, `party`, `constituency`
+- **Constraint:** `UNIQUE(member_id, legislature)` ensures no duplicates
+
+**Implementation (Updated):**
+- **Two Use Cases:**
+  - `SynchronizeMembersUseCase`: Checks if members exist; scrapes if missing; saves to database
+  - `SynchronizeMinutesUseCase`: Processes minutes for a specific legislature
+- **Execution Flow:**
+  1. `sync_job.py` reads `LEGISLATURE` environment variable (default: 56)
+  2. Execute `SynchronizeMembersUseCase` first (prerequisite)
+  3. If members exist → skip scraping, log count
+  4. If members missing → scrape from web, save to database
+  5. Execute `SynchronizeMinutesUseCase` with legislature parameter
+- **Infrastructure Components:**
+  - `PostgresMemberRepository`: Handles member CRUD operations
+  - `ChamberMemberScraper`: Scrapes member list from parliament website
+- **Database Tables:**
+  - `members`: Stores member data with `UNIQUE(member_id, legislature)` constraint
+  - `minutes`: Stores minute metadata with `legislature` column
+- **Minister Identification:** Happens through member role/status (to be implemented)
+
+**Environment Variables:**
+- `LEGISLATURE=56` (default): Legislature number to process
 
 ## Testing & Validation
 - **TDD:** Write tests before implementing business logic. Use domain-driven test names.
@@ -100,12 +144,14 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **Efficiency:** Optimize parsing and DB operations for large/minute-heavy sessions.
 
 ## Examples
-- Scraping: `python backend/sync_job.py` (monthly batch)
-- Testing: `cd backend && python -m unittest discover -s tests -v` (all tests)
-- Devcontainer: Launch VS Code in devcontainer for consistent environment
-- Update Python dependencies: Edit `postCreateCommand` in `.devcontainer/devcontainer.json`
-- Add VS Code extension: List in `customizations.vscode.extensions` and request approval
-- Forward a new port: Add to `forwardPorts` and explain its purpose
+- **Scraping (default legislature 56):** `python backend/sync_job.py`
+- **Scraping (custom legislature):** `LEGISLATURE=57 python backend/sync_job.py`
+- **Testing:** `cd backend && python -m unittest discover -s tests -v` (all tests)
+- **Quick integration test:** `python backend/test_integration_flow.py`
+- **Devcontainer:** Launch VS Code in devcontainer for consistent environment
+- **Update Python dependencies:** Edit `postCreateCommand` in `.devcontainer/devcontainer.json`
+- **Add VS Code extension:** List in `customizations.vscode.extensions` and request approval
+- **Forward a new port:** Add to `forwardPorts` and explain its purpose
 
 ## Agent Guidance
 - Use business terms for all class/function names (e.g., `MinisterAttendanceCalculator`, `SessionVoteParser`).

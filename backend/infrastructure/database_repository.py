@@ -77,21 +77,32 @@ class PostgresMinuteRepository(IMinuteRepository):
                     minute.metadata.description,
                     minute.metadata.document_url,
                     minute.metadata.is_provisional,
-                    minute.content_storage_key,  # Store key instead of content
+                    minute.content_storage_key,
+                    minute.metadata.legislature,
                 )
                 for minute in minutes
             ]
             
             # Insert/update metadata with content storage key
             cursor.executemany("""
-                INSERT INTO minutes (ref, date, session, url, is_temporary, content_storage_key)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO minutes (
+                    ref,
+                    date,
+                    session,
+                    url,
+                    is_temporary,
+                    content_storage_key,
+                    legislature
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (ref) DO UPDATE SET
                     date = EXCLUDED.date,
                     session = EXCLUDED.session,
                     url = EXCLUDED.url,
                     is_temporary = EXCLUDED.is_temporary,
-                    content_storage_key = EXCLUDED.content_storage_key
+                    content_storage_key = EXCLUDED.content_storage_key,
+                    legislature = EXCLUDED.legislature,
+                    updated_at = CURRENT_TIMESTAMP
             """, metadata_data)
             
             self.logger.info(f"Saved {len(minutes)} minutes to database")

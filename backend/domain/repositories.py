@@ -131,3 +131,71 @@ class IContentStorage(ABC):
             True if content exists, False otherwise
         """
         pass
+
+
+class IMemberRepository(ABC):
+    """
+    Repository interface for parliament members.
+    
+    Defines operations for storing and checking member data.
+    """
+    
+    @abstractmethod
+    def has_members_for_legislature(self, legislature: int) -> bool:
+        """
+        Check if members exist for a specific legislature.
+        
+        Args:
+            legislature: Legislature number to check
+            
+        Returns:
+            True if members exist, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def save_members(self, members: List) -> None:
+        """
+        Save multiple members to persistent storage.
+        
+        Args:
+            members: List of member entities to save
+        """
+        pass
+    
+    @abstractmethod
+    def count_members_for_legislature(self, legislature: int) -> int:
+        """
+        Count members for a specific legislature.
+        
+        Args:
+            legislature: Legislature number
+            
+        Returns:
+            Number of members
+        """
+        pass
+
+
+class IMemberScraper(ABC):
+    """
+    Service interface for scraping parliament members.
+    """
+    
+    @abstractmethod
+    def scrape_members(
+        self,
+        legislature: int,
+        html_content: str = None
+    ) -> List:
+        """
+        Scrape member list for a legislature.
+        
+        Args:
+            legislature: Legislature number
+            html_content: Optional pre-downloaded HTML
+            
+        Returns:
+            List of member objects
+        """
+        pass

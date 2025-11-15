@@ -10,9 +10,14 @@ import logging
 import sys
 import os
 
-from application.use_cases import SynchronizeMinutesUseCase
+from application.use_cases import (
+    SynchronizeMinutesUseCase,
+    SynchronizeMembersUseCase
+)
 from infrastructure.web_scraper import ParliamentaryWebScraper
 from infrastructure.database_repository import PostgresMinuteRepository
+from infrastructure.member_repository import PostgresMemberRepository
+from infrastructure.member_scraper import ChamberMemberScraper
 from infrastructure.local_file_storage import LocalFileSystemStorage
 from infrastructure.azure_blob_storage import AzureBlobStorage
 
@@ -52,33 +57,52 @@ def main():
     Main entry point - Dependency Injection and Use Case Execution.
     
     Sets up infrastructure adapters and executes the synchronization
-    use case following clean architecture and dependency inversion principles.
+    use case following clean architecture and dependency inversion.
     
     Environment Variables:
+        LEGISLATURE: Legislature number to process (default: 56)
         CONTENT_STORAGE: 'local' (default) or 'azure'
-        LOCAL_STORAGE_PATH: Path for local storage (default: ./data/minutes)
-        AZURE_STORAGE_CONNECTION_STRING: Azure connection string (required for azure)
-        AZURE_STORAGE_CONTAINER: Azure container name (default: minutes)
+        LOCAL_STORAGE_PATH: Path for local storage
+                           (default: ./data/minutes)
+        AZURE_STORAGE_CONNECTION_STRING: Azure connection string
+                                         (required for azure)
+        AZURE_STORAGE_CONTAINER: Azure container name
+                                (default: minutes)
     """
     logger = logging.getLogger(__name__)
-    logger.info("🚀 Starting parliamentary minute synchronization")
+    
+    # Get legislature from environment or use default
+    legislature = int(os.getenv('LEGISLATURE', '56'))
+    
+    logger.info(
+        f"🚀 Starting synchronization for legislature {legislature}"
+    )
     
     try:
         # Infrastructure layer - adapters for external systems
-        web_scraper = ParliamentaryWebScraper()
+        web_scraper = ParliamentaryWebScraper(legislature=legislature)
         database_repo = PostgresMinuteRepository()
         content_storage = create_content_storage()
+        member_repo = PostgresMemberRepository()
+        member_scraper = ChamberMemberScraper()
         
-        # Application layer - use case with injected dependencies
-        use_case = SynchronizeMinutesUseCase(
+        # Step 1: Synchronize members (prerequisite check)
+        logger.info("Step 1: Synchronizing members")
+        member_use_case = SynchronizeMembersUseCase(
+            member_repo=member_repo,
+            member_scraper=member_scraper
+        )
+        member_use_case.execute(legislature)
+        
+        # Step 2: Synchronize minutes
+        logger.info("Step 2: Synchronizing minutes")
+        minute_use_case = SynchronizeMinutesUseCase(
             session_metadata_repo=web_scraper,
             minute_repo=database_repo,
             content_retriever=web_scraper,
             content_storage=content_storage
         )
-        
-        # Execute business logic
-        use_case.execute()
+        minute_use_case.execute(legislature)
         
         logger.info("✅ Synchronization completed successfully")
         

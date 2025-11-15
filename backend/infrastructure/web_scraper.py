@@ -24,10 +24,10 @@ class ParliamentaryWebScraper(ISessionMetadataRepository, IMinuteContentRetrieve
     """
     
     BASE_URL = "https://www.lachambre.be"
-    LEGISLATURE_56_URL = (
+    LEGISLATURE_URL_TEMPLATE = (
         BASE_URL + "/kvvcr/showpage.cfm?"
         "section=/cricra&language=fr&cfm=dcricra.cfm?"
-        "type=plen&cricra=CRI&count=all&legislat=56"
+        "type=plen&cricra=CRI&count=all&legislat={legislature}"
     )
     
     def __init__(self, legislature: int = 56):
@@ -39,22 +39,30 @@ class ParliamentaryWebScraper(ISessionMetadataRepository, IMinuteContentRetrieve
         """
         self.logger = logging.getLogger(__name__)
         self.legislature = legislature
+        self.legislature_url = self.LEGISLATURE_URL_TEMPLATE.format(
+            legislature=legislature
+        )
     
     def retrieve_all_sessions(self) -> List[SessionMetadata]:
         """
         Retrieve all session metadata from the parliamentary website.
         
-        Scrapes the legislature 56 listing page and extracts metadata
+        Scrapes the legislature listing page and extracts metadata
         for all available sessions.
         
         Returns:
             List of SessionMetadata objects
         """
-        self.logger.info("Scraping session metadata from parliament website")
+        self.logger.info(
+            f"Scraping session metadata for legislature {self.legislature}"
+        )
         
-        response = requests.get(self.LEGISLATURE_56_URL)
+        response = requests.get(self.legislature_url)
         if response.status_code != 200:
-            raise Exception(f"HTTP error {response.status_code}")
+            raise Exception(
+                f"HTTP error {response.status_code} "
+                f"for legislature {self.legislature}"
+            )
         
         page = BeautifulSoup(response.text, "html.parser")
         table = page.find("table", id="lst")
