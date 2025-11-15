@@ -25,6 +25,59 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **Database:** Use schema migration tools; avoid manual changes. Store attendance, votes, and session metadata.
 - **Frontend:** Consumes precomputed KPIs and attendance data; no direct DB access.
 
+## Implementation Details
+
+### Content Storage Architecture (Implemented)
+**Decision:** Separate large HTML content from database to improve scalability and maintainability.
+
+**Implementation:**
+- **Domain Layer:** `IContentStorage` interface defines storage contract (store_content, retrieve_content, exists)
+- **Infrastructure Implementations:**
+  - `LocalFileSystemStorage`: Stores HTML files in `./data/minutes/` directory (development)
+  - `AzureBlobStorage`: Stores in Azure Blob Storage container (production)
+- **Entity Updates:** `ParliamentaryMinute` uses `content_storage_key` instead of `full_text_content`
+- **Configuration:** Environment variable `CONTENT_STORAGE` selects provider ('local' or 'azure')
+- **Database Schema:** Store only metadata + `content_storage_key` reference; remove `minutes_text` table
+
+**Rationale:**
+- Database optimized for metadata queries, not large text storage
+- Easy to switch between local development and cloud production
+- Follows Clean Architecture: domain defines interface, infrastructure provides implementations
+- Content can be cached/CDN-served independently from database
+
+**Next Steps:**
+1. Database migration: Add `content_storage_key` column, drop `minutes_text` table
+2. Add `azure-storage-blob` to `requirements.txt`
+3. Test with real scraping data
+
+### Clean Architecture Layers
+**Domain Layer** (`backend/domain/`):
+- Pure business entities: `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
+- Repository interfaces (ports): `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`, `IContentStorage`
+- No external dependencies, only Python standard library
+
+**Application Layer** (`backend/application/`):
+- Use cases orchestrate business workflows: `SynchronizeMinutesUseCase`
+- Depend only on domain interfaces, not concrete implementations
+- Handle business rules like "don't overwrite definitive minutes"
+
+**Infrastructure Layer** (`backend/infrastructure/`):
+- Concrete implementations (adapters): `ParliamentaryWebScraper`, `PostgresMinuteRepository`, `LocalFileSystemStorage`, `AzureBlobStorage`
+- External dependencies: `psycopg2`, `beautifulsoup4`, `requests`, `azure-storage-blob`
+- Main entry point (`sync_job.py`) wires dependencies together
+
+### Testing Strategy
+- **Domain Tests** (`test_domain_entities.py`): Pure unit tests, no mocks needed
+- **Use Case Tests** (`test_use_case.py`): Mock all infrastructure dependencies
+- **Infrastructure Tests** (`test_infrastructure.py`): Integration tests with mock HTML responses
+- **Storage Tests** (`test_content_storage.py`): File system operations with `tempfile` for isolation
+
+### Current Focus: Legislature 56
+- **Time Period:** 2024-present (current legislature)
+- **Document Types:** Provisoire (provisional) and Définitif (definitive) minutes
+- **Source:** Belgian Federal Parliament website
+- **Update Strategy:** Provisional minutes can be updated/replaced; definitive are immutable
+
 ## Testing & Validation
 - **TDD:** Write tests before implementing business logic. Use domain-driven test names.
 - **Resilience:** Batch must handle failures gracefully and be idempotent.
