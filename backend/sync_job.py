@@ -10,7 +10,7 @@ import logging
 import sys
 import os
 
-from application.use_cases import (
+from application import (
     SynchronizeMinutesUseCase,
     SynchronizeMembersUseCase
 )

@@ -171,7 +171,7 @@ class ChamberMemberScraper:
             for row in rows:
                 cells = row.find_all('td')
                 
-                if len(cells) < 3:
+                if len(cells) < 1:
                     continue
                 
                 # First cell should contain member link

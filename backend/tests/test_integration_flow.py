@@ -6,7 +6,7 @@ Quick integration test to verify the member prerequisite flow.
 import logging
 from unittest.mock import Mock
 
-from application.use_cases import (
+from application import (
     SynchronizeMembersUseCase,
     SynchronizeMinutesUseCase
 )

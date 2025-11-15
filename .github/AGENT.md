@@ -71,6 +71,7 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 
 ### Clean Architecture Layers
 **Domain Layer** (`backend/domain/`):
+- **Convention:** One class per file, organized into namespaces
 - Organized into two namespaces:
   - **`entities/`** : Domain entities and value objects (one file per class)
     - `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
@@ -80,11 +81,16 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - No external dependencies, only Python standard library
 
 **Application Layer** (`backend/application/`):
+- **Convention:** One use case per file, named after the class in snake_case
+- **File Structure:**
+  - `synchronize_members_use_case.py` → `SynchronizeMembersUseCase`
+  - `synchronize_minutes_use_case.py` → `SynchronizeMinutesUseCase`
 - Use cases orchestrate business workflows:
   - `SynchronizeMembersUseCase`: Ensures member data exists for legislature (prerequisite check)
   - `SynchronizeMinutesUseCase`: Retrieves and stores parliamentary minutes for a legislature
 - Depend only on domain interfaces, not concrete implementations
 - Handle business rules like "don't overwrite definitive minutes" and "members must exist before processing minutes"
+- Exported from `application/__init__.py` for convenient imports
 
 **Infrastructure Layer** (`backend/infrastructure/`):
 - Organized into three namespaces:
@@ -124,7 +130,7 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **Uniqueness:** A member is unique per legislature (cannot be member twice for same legislature)
 - **Minister Status:** A minister is a member with special status/role attribute
 - **Static List:** Member list doesn't change during a legislature (only updated when scraped)
-- **Database Schema:** Members stored with `member_id`, `legislature`, `full_name`, `party`, `constituency`
+- **Database Schema:** Members stored with `member_id`, `legislature`, `full_name`, `last_name`, `first_name`
 - **Constraint:** `UNIQUE(member_id, legislature)` ensures no duplicates
 
 **Implementation (Updated):**

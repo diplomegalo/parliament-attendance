@@ -7,7 +7,7 @@ saving data to verify the scraping and business logic work correctly.
 """
 
 import logging
-from application.use_cases import SynchronizeMinutesUseCase
+from application import SynchronizeMinutesUseCase
 from infrastructure.scrapers.session_scraper import ParliamentarySessionScraper
 from infrastructure.storage.local_file_storage import LocalFileSystemStorage
 

@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import Mock, MagicMock
 from datetime import datetime
 
-from application.use_cases import SynchronizeMinutesUseCase
+from application import SynchronizeMinutesUseCase
 from domain.entities import SessionMetadata, SessionReference, ParliamentaryMinute
 
 
@@ -33,7 +33,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         """Test execution when no sessions are available."""
         self.session_repo.retrieve_all_sessions.return_value = []
         
-        self.use_case.execute()
+        self.use_case.execute(56)
         
         # Should not call save or retrieve content
         self.content_retriever.retrieve_content.assert_not_called()
@@ -56,7 +56,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         self.content_storage.store_content.return_value = "storage/PROV001.html"
         
         # Execute
-        self.use_case.execute()
+        self.use_case.execute(56)
         
         # Verify
         self.content_retriever.retrieve_content.assert_called_once_with("/prov001")
@@ -95,7 +95,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         self.content_storage.store_content.return_value = "storage/DEF002.html"
         
         # Execute
-        self.use_case.execute()
+        self.use_case.execute(56)
         
         # Verify only DEF002 is processed
         self.content_retriever.retrieve_content.assert_called_once_with("/def002")
@@ -144,7 +144,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         self.content_storage.store_content.return_value = "storage/key.html"
         
         # Execute
-        self.use_case.execute()
+        self.use_case.execute(56)
         
         # Verify provisional + new definitive are processed
         self.assertEqual(self.content_retriever.retrieve_content.call_count, 2)
@@ -184,7 +184,7 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
         self.content_storage.store_content.return_value = "storage/S002.html"
         
         # Execute
-        self.use_case.execute()
+        self.use_case.execute(56)
         
         # Verify second session is still saved
         saved_minutes = self.minute_repo.save_minutes.call_args[0][0]
