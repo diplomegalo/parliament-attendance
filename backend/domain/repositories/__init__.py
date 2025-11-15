@@ -15,6 +15,13 @@ from .vote_parser import IVoteParser
 from .attendance_repository import IAttendanceRepository
 from .vote_repository import IVoteRepository
 from .cleaned_text_repository import ICleanedTextRepository
+from .llm_client import (
+    ILLMClient,
+    LLMError,
+    LLMConnectionError,
+    LLMRateLimitError,
+    LLMValidationError
+)
 
 __all__ = [
     'ISessionMetadataRepository',
@@ -28,4 +35,9 @@ __all__ = [
     'IAttendanceRepository',
     'IVoteRepository',
     'ICleanedTextRepository',
+    'ILLMClient',
+    'LLMError',
+    'LLMConnectionError',
+    'LLMRateLimitError',
+    'LLMValidationError',
 ]
