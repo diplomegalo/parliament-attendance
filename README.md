@@ -160,8 +160,8 @@ Le projet suit les principes de Clean Architecture et DDD tout en restant simple
 
 ### Couches
 1. **Domain** : Logique métier pure, aucune dépendance externe
-   - Entités : `SessionMetadata`, `ParliamentaryMinute`
-   - Interfaces : `IMemberRepository`, `IMemberScraper`, `IMinuteRepository`, `IContentStorage`
+   - **Entités** : `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
+   - **Interfaces** : `IMemberRepository`, `IMemberScraper`, `IMinuteRepository`, `IContentStorage`
 2. **Application** : Cas d'usage orchestrant les règles métier
    - `SynchronizeMembersUseCase` : Vérification/scraping prérequis membres
    - `SynchronizeMinutesUseCase` : Synchronisation des comptes rendus

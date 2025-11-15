@@ -71,8 +71,12 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 
 ### Clean Architecture Layers
 **Domain Layer** (`backend/domain/`):
-- Pure business entities: `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
-- Repository interfaces (ports): `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`, `IContentStorage`, `IMemberRepository`, `IMemberScraper`
+- Organized into two namespaces:
+  - **`entities/`** : Domain entities and value objects (one file per class)
+    - `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
+  - **`repositories/`** : Repository and service interfaces - ports (one file per interface)
+    - `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`
+    - `IContentStorage`, `IMemberRepository`, `IMemberScraper`
 - No external dependencies, only Python standard library
 
 **Application Layer** (`backend/application/`):
