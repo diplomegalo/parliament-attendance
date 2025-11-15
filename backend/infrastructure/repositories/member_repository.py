@@ -147,3 +147,45 @@ class PostgresMemberRepository(IMemberRepository):
                 f"Saved {len(members)} members to database "
                 f"(legislature {members[0].legislature if members else 'N/A'})"
             )
+    
+    def find_by_legislature(self, legislature: int) -> List:
+        """
+        Find all members for a specific legislature.
+        
+        Args:
+            legislature: Legislature number
+            
+        Returns:
+            List of member dictionaries with id, member_id, legislature,
+            full_name, last_name, first_name
+        """
+        with self._get_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, member_id, legislature, full_name,
+                       last_name, first_name, created_at, updated_at
+                FROM members
+                WHERE legislature = %s
+                ORDER BY last_name, first_name
+            """, (legislature,))
+            
+            rows = cursor.fetchall()
+            
+            members = [
+                {
+                    'id': row[0],
+                    'member_id': row[1],
+                    'legislature': row[2],
+                    'full_name': row[3],
+                    'last_name': row[4],
+                    'first_name': row[5],
+                    'created_at': row[6],
+                    'updated_at': row[7],
+                }
+                for row in rows
+            ]
+            
+            self.logger.debug(
+                f"Found {len(members)} members for legislature {legislature}"
+            )
+            
+            return members

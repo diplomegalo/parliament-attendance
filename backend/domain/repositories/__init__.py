@@ -10,6 +10,11 @@ from .content_retriever import IMinuteContentRetriever
 from .content_storage import IContentStorage
 from .member_repository import IMemberRepository
 from .member_scraper import IMemberScraper
+from .attendance_parser import IAttendanceParser
+from .vote_parser import IVoteParser
+from .attendance_repository import IAttendanceRepository
+from .vote_repository import IVoteRepository
+from .cleaned_text_repository import ICleanedTextRepository
 
 __all__ = [
     'ISessionMetadataRepository',
@@ -18,4 +23,9 @@ __all__ = [
     'IContentStorage',
     'IMemberRepository',
     'IMemberScraper',
+    'IAttendanceParser',
+    'IVoteParser',
+    'IAttendanceRepository',
+    'IVoteRepository',
+    'ICleanedTextRepository',
 ]

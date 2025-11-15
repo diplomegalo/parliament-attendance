@@ -50,3 +50,16 @@ class IMemberRepository(ABC):
             Number of members
         """
         pass
+    
+    @abstractmethod
+    def find_by_legislature(self, legislature: int) -> List:
+        """
+        Find all members for a specific legislature.
+        
+        Args:
+            legislature: Legislature number
+            
+        Returns:
+            List of member entities
+        """
+        pass

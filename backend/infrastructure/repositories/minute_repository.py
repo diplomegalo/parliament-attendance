@@ -128,3 +128,60 @@ class PostgresMinuteRepository(IMinuteRepository):
             existing = {row[0] for row in cursor.fetchall()}
             self.logger.debug(f"Found {len(existing)} existing references")
             return existing
+    
+    def find_by_legislature(
+        self, legislature: int
+    ) -> List[ParliamentaryMinute]:
+        """
+        Find all minutes for a specific legislature.
+        
+        Args:
+            legislature: Legislature number
+            
+        Returns:
+            List of ParliamentaryMinute entities with basic metadata
+        """
+        from domain.entities.session_metadata import SessionMetadata
+        import datetime
+        
+        with self._get_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, ref, date, session, url,
+                       is_temporary, content_storage_key, legislature,
+                       created_at, updated_at
+                FROM minutes
+                WHERE legislature = %s
+                ORDER BY ref
+            """, (legislature,))
+            
+            rows = cursor.fetchall()
+            
+            minutes = []
+            for row in rows:
+                date_val = row[2]
+                if not isinstance(date_val, datetime.date):
+                    date_val = datetime.datetime.fromisoformat(
+                        str(date_val)
+                    ).date()
+                
+                metadata = SessionMetadata(
+                    reference=row[1],
+                    date=date_val,
+                    description=row[3],
+                    document_url=row[4],
+                    is_provisional=row[5],
+                    legislature=row[7]  # int, SessionMetadata expects int
+                )
+                
+                minute = ParliamentaryMinute(
+                    metadata=metadata,
+                    content_storage_key=row[6],
+                    id=row[0]
+                )
+                minutes.append(minute)
+            
+            self.logger.debug(
+                f"Found {len(minutes)} minutes for legislature {legislature}"
+            )
+            
+            return minutes

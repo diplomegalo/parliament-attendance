@@ -72,12 +72,18 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 ### Clean Architecture Layers
 **Domain Layer** (`backend/domain/`):
 - **Convention:** One class per file, organized into namespaces
-- Organized into two namespaces:
-  - **`entities/`** : Domain entities and value objects (one file per class)
-    - `SessionReference`, `SessionMetadata`, `ParliamentaryMinute`
+- Organized into three namespaces:
+  - **`value_objects/`** : Immutable value objects (frozen dataclasses)
+    - `SessionReference`, `Legislature`, `VotePosition`, `ConfidenceScore`
+    - All value objects use `@dataclass(frozen=True)` for immutability
+    - Auto-conversion: Entities automatically convert raw types (e.g., float → ConfidenceScore)
+  - **`entities/`** : Domain entities (one file per class)
+    - `SessionMetadata`, `ParliamentaryMinute`, `Member`, `MemberPresence`, `Vote`, `MemberVote`, `CleanedMinuteText`
+    - Entities use value objects for typed attributes
   - **`repositories/`** : Repository and service interfaces - ports (one file per interface)
     - `ISessionMetadataRepository`, `IMinuteRepository`, `IMinuteContentRetriever`
-    - `IContentStorage`, `IMemberRepository`, `IMemberScraper`
+    - `IContentStorage`, `IMemberRepository`, `IMemberScraper`, `IAttendanceRepository`, `ICleanedTextRepository`
+- **Architecture Pattern:** Legislature duplication eliminated - obtain via joins through session_ref → minutes table
 - No external dependencies, only Python standard library
 
 **Application Layer** (`backend/application/`):
@@ -85,9 +91,12 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - **File Structure:**
   - `synchronize_members_use_case.py` → `SynchronizeMembersUseCase`
   - `synchronize_minutes_use_case.py` → `SynchronizeMinutesUseCase`
+  - `extract_attendance_use_case.py` → `ExtractAttendanceUseCase`
 - Use cases orchestrate business workflows:
   - `SynchronizeMembersUseCase`: Ensures member data exists for legislature (prerequisite check)
   - `SynchronizeMinutesUseCase`: Retrieves and stores parliamentary minutes for a legislature
+  - `ExtractAttendanceUseCase`: Orchestrates AI-based attendance extraction with cleaned text traceability
+- **Traceability Pattern:** Before AI parsing, store cleaned text in `CleanedMinuteText` for reproducibility
 - Depend only on domain interfaces, not concrete implementations
 - Handle business rules like "don't overwrite definitive minutes" and "members must exist before processing minutes"
 - Exported from `application/__init__.py` for convenient imports
@@ -108,10 +117,15 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
   3. Passes legislature to web scraper for URL construction
 
 ### Testing Strategy
-- **Domain Tests** (`test_domain_entities.py`): Pure unit tests, no mocks needed
+- **Domain Tests:**
+  - `test_domain_entities.py`: Pure unit tests for entities
+  - `test_value_objects.py`: Tests for immutable value objects
+  - `test_attendance_entities.py`: Tests for attendance/vote entities
+  - `test_cleaned_text.py`: Tests for CleanedMinuteText traceability
 - **Use Case Tests** (`test_use_case.py`): Mock all infrastructure dependencies
 - **Infrastructure Tests** (`test_infrastructure.py`): Integration tests with mock HTML responses
 - **Storage Tests** (`test_content_storage.py`): File system operations with `tempfile` for isolation
+- **Test Coverage:** 82 tests passing - all domain logic validated
 
 ### Current Focus: Legislature 56
 - **Time Period:** 2024-present (current legislature)

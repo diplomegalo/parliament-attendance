@@ -1,5 +1,12 @@
-DROP TABLE IF EXISTS minutes_text;
-DROP TABLE IF EXISTS minutes;
+-- Drop tables if they exist (in reverse dependency order)
+DROP TABLE IF EXISTS member_votes CASCADE;
+DROP TABLE IF EXISTS votes CASCADE;
+DROP TABLE IF EXISTS member_presences CASCADE;
+DROP TABLE IF EXISTS attendance CASCADE;
+DROP TABLE IF EXISTS cleaned_texts CASCADE;
+DROP TABLE IF EXISTS minutes_text CASCADE;
+DROP TABLE IF EXISTS minutes CASCADE;
+DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS members CASCADE;
 
 CREATE TABLE IF NOT EXISTS minutes(
@@ -53,3 +60,93 @@ CREATE INDEX IF NOT EXISTS idx_members_name_search
     ON members USING gin(to_tsvector('simple', 
         full_name || ' ' || last_name || ' ' || first_name));
 
+-- Attendance table: Tracks member presence in sessions
+CREATE TABLE IF NOT EXISTS attendance(
+    id SERIAL PRIMARY KEY,
+    member_id VARCHAR(50) NOT NULL,
+    session_ref CHAR(4) NOT NULL,
+    legislature INTEGER NOT NULL,
+    spoke BOOLEAN DEFAULT FALSE,
+    interventions_count INTEGER DEFAULT 0,
+    confidence_score FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id, legislature) 
+        REFERENCES members(member_id, legislature) ON DELETE CASCADE,
+    FOREIGN KEY (session_ref) 
+        REFERENCES minutes(ref) ON DELETE CASCADE,
+    UNIQUE(member_id, session_ref)
+);
+
+-- Indexes for attendance queries
+CREATE INDEX IF NOT EXISTS idx_attendance_member 
+    ON attendance(member_id, legislature);
+CREATE INDEX IF NOT EXISTS idx_attendance_session 
+    ON attendance(session_ref);
+CREATE INDEX IF NOT EXISTS idx_attendance_spoke 
+    ON attendance(spoke);
+
+-- Votes table: Parliamentary votes by session
+CREATE TABLE IF NOT EXISTS votes(
+    id SERIAL PRIMARY KEY,
+    session_ref CHAR(4) NOT NULL,
+    vote_topic TEXT NOT NULL,
+    vote_date DATE NOT NULL,
+    legislature INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_ref) 
+        REFERENCES minutes(ref) ON DELETE CASCADE
+);
+
+-- Indexes for vote queries
+CREATE INDEX IF NOT EXISTS idx_votes_session 
+    ON votes(session_ref);
+CREATE INDEX IF NOT EXISTS idx_votes_date 
+    ON votes(vote_date);
+CREATE INDEX IF NOT EXISTS idx_votes_legislature 
+    ON votes(legislature);
+
+-- Member votes table: Individual member positions on votes
+CREATE TABLE IF NOT EXISTS member_votes(
+    id SERIAL PRIMARY KEY,
+    vote_id INTEGER NOT NULL,
+    member_id VARCHAR(50) NOT NULL,
+    legislature INTEGER NOT NULL,
+    position VARCHAR(20) NOT NULL CHECK (position IN ('yes', 'no', 'abstain')),
+    confidence_score FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (vote_id) 
+        REFERENCES votes(id) ON DELETE CASCADE,
+    FOREIGN KEY (member_id, legislature) 
+        REFERENCES members(member_id, legislature) ON DELETE CASCADE,
+    UNIQUE(vote_id, member_id)
+);
+
+-- Indexes for member vote queries
+CREATE INDEX IF NOT EXISTS idx_member_votes_vote 
+    ON member_votes(vote_id);
+CREATE INDEX IF NOT EXISTS idx_member_votes_member 
+    ON member_votes(member_id, legislature);
+CREATE INDEX IF NOT EXISTS idx_member_votes_position 
+    ON member_votes(position);
+
+-- Cleaned texts table: Metadata for preprocessed text (content in storage)
+CREATE TABLE IF NOT EXISTS cleaned_texts(
+    id SERIAL PRIMARY KEY,
+    minute_ref CHAR(4) NOT NULL UNIQUE,
+    content_storage_key VARCHAR(500) NOT NULL,
+    cleaning_method VARCHAR(50) NOT NULL,
+    text_hash CHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (minute_ref) 
+        REFERENCES minutes(ref) ON DELETE CASCADE
+);
+
+-- Indexes for cleaned text queries
+CREATE INDEX IF NOT EXISTS idx_cleaned_texts_minute_ref 
+    ON cleaned_texts(minute_ref);
+CREATE INDEX IF NOT EXISTS idx_cleaned_texts_text_hash 
+    ON cleaned_texts(text_hash);
+CREATE INDEX IF NOT EXISTS idx_cleaned_texts_cleaning_method 
+    ON cleaned_texts(cleaning_method);

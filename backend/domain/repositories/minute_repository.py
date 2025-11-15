@@ -40,3 +40,18 @@ class IMinuteRepository(ABC):
             Set of reference strings that exist in storage
         """
         pass
+    
+    @abstractmethod
+    def find_by_legislature(
+        self, legislature: int
+    ) -> List[ParliamentaryMinute]:
+        """
+        Find all minutes for a specific legislature.
+        
+        Args:
+            legislature: Legislature number
+            
+        Returns:
+            List of ParliamentaryMinute entities
+        """
+        pass
