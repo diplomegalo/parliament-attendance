@@ -42,7 +42,7 @@ load_dotenv()
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from infrastructure.storage.local_file_storage import LocalFileSystemStorage
+from infrastructure.storage.storage_factory import StorageFactory
 from infrastructure.repositories.minute_repository import PostgresMinuteRepository
 from infrastructure.repositories.cleaned_text_repository import PostgreSQLCleanedTextRepository
 from infrastructure.repositories.member_repository import PostgresMemberRepository
@@ -81,7 +81,7 @@ def compute_attendance_for_minute(
     print(f"{'='*80}\n")
     
     # Initialize repositories
-    content_storage = LocalFileSystemStorage()
+    content_storage = StorageFactory.create_cleaned_storage()
     cleaned_text_repo = PostgreSQLCleanedTextRepository()
     # Note: attendance_repo not used in dry run mode
     

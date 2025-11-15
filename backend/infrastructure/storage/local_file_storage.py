@@ -18,24 +18,35 @@ class LocalFileSystemStorage(IContentStorage):
     Suitable for development and testing environments.
     """
     
-    def __init__(self, base_path: str = None):
+    def __init__(self, base_path: str = None, storage_name: str = None):
         """
         Initialize local file system storage.
         
         Args:
-            base_path: Base directory for storing files. 
-                      Defaults to /workspaces/parliament-attendance/data/minutes
+            base_path: Base directory for storing files.
+                      Defaults to /workspaces/parliament-attendance/data
+            storage_name: Subdirectory name for content segregation
+                         (e.g., 'minutes', 'cleaned').
+                         If None, uses 'minutes' as default.
         """
         if base_path is None:
             # Always use absolute path from workspace root
             workspace_root = Path(__file__).parent.parent.parent.parent
-            base_path = workspace_root / 'data' / 'minutes'
+            base_path = workspace_root / 'data'
         
         self.base_path = Path(base_path)
+        
+        # Add storage_name subdirectory for segregation
+        if storage_name is None:
+            storage_name = 'minutes'
+        
+        self.base_path = self.base_path / storage_name
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.logger = logging.getLogger(__name__)
         
-        self.logger.info(f"Initialized local storage at: {self.base_path.absolute()}")
+        self.logger.info(
+            f"Initialized local storage at: {self.base_path.absolute()}"
+        )
     
     def store_content(self, reference: str, content: str) -> str:
         """
@@ -49,7 +60,8 @@ class LocalFileSystemStorage(IContentStorage):
             Relative file path as storage key
         """
         # Sanitize filename - replace problematic characters
-        filename = reference.replace('/', '_').replace('\\', '_').replace(' ', '_')
+        filename = reference.replace('/', '_').replace('\\', '_')
+        filename = filename.replace(' ', '_')
         filename = f"{filename}.html"
         
         filepath = self.base_path / filename
@@ -58,7 +70,9 @@ class LocalFileSystemStorage(IContentStorage):
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        self.logger.debug(f"Stored content: {filename} ({len(content)} bytes)")
+        self.logger.debug(
+            f"Stored content: {filename} ({len(content)} bytes)"
+        )
         
         # Return relative path as storage key
         return str(filepath)

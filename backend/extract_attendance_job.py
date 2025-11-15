@@ -16,8 +16,7 @@ from infrastructure.repositories.minute_repository import (
 from infrastructure.repositories.cleaned_text_repository import (
     PostgreSQLCleanedTextRepository
 )
-from infrastructure.storage.local_file_storage import LocalFileSystemStorage
-from infrastructure.storage.azure_blob_storage import AzureBlobStorage
+from infrastructure.storage.storage_factory import StorageFactory
 from domain.entities import CleanedMinuteText
 
 # Configure logging
@@ -26,29 +25,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-
-def create_content_storage():
-    """
-    Create appropriate content storage based on environment.
-    
-    Development: Uses local filesystem storage
-    Production: Uses Azure Blob Storage
-    
-    Returns:
-        IContentStorage implementation
-    """
-    logger = logging.getLogger(__name__)
-    storage_type = os.getenv('CONTENT_STORAGE', 'local').lower()
-    
-    if storage_type == 'azure':
-        logger.info("Initializing Azure Blob Storage for content")
-        connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-        container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'minutes')
-        return AzureBlobStorage(connection_string, container_name)
-    else:
-        logger.info("Initializing Local File System Storage for content")
-        storage_path = os.getenv('LOCAL_STORAGE_PATH', './data/minutes')
-        return LocalFileSystemStorage(storage_path)
 
 
 def main():
@@ -88,7 +64,7 @@ def main():
     try:
         # Infrastructure layer - adapters for external systems
         minute_repo = PostgresMinuteRepository()
-        content_storage = create_content_storage()
+        content_storage = StorageFactory.create_cleaned_storage()
         cleaned_text_repo = PostgreSQLCleanedTextRepository()
         
         # Import here to avoid unused import errors

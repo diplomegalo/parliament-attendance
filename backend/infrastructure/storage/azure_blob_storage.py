@@ -23,14 +23,22 @@ class AzureBlobStorage(IContentStorage):
     Suitable for production and cloud-hosted environments.
     """
     
-    def __init__(self, connection_string: str = None, container_name: str = "minutes"):
+    def __init__(
+        self,
+        connection_string: str = None,
+        container_name: str = "minutes",
+        storage_name: str = None
+    ):
         """
         Initialize Azure Blob Storage.
         
         Args:
             connection_string: Azure Storage connection string.
-                              If None, reads from AZURE_STORAGE_CONNECTION_STRING env var
+                              If None, reads from env var
             container_name: Name of the blob container to use
+            storage_name: Prefix path for content segregation
+                         (e.g., 'minutes', 'cleaned').
+                         If None, blobs are stored at container root.
             
         Raises:
             ImportError: If azure-storage-blob is not installed
@@ -48,16 +56,22 @@ class AzureBlobStorage(IContentStorage):
         
         if not connection_string:
             raise ValueError(
-                "Azure Storage connection string must be provided either as "
-                "parameter or via AZURE_STORAGE_CONNECTION_STRING environment variable"
+                "Azure Storage connection string must be provided either "
+                "as parameter or via AZURE_STORAGE_CONNECTION_STRING "
+                "environment variable"
             )
         
         self.logger = logging.getLogger(__name__)
         self.container_name = container_name
+        self.storage_name = storage_name
         
         # Initialize blob service client
-        self.blob_service = BlobServiceClient.from_connection_string(connection_string)
-        self.container_client = self.blob_service.get_container_client(container_name)
+        self.blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+        self.container_client = self.blob_service.get_container_client(
+            container_name
+        )
         
         # Create container if it doesn't exist
         try:
@@ -67,7 +81,9 @@ class AzureBlobStorage(IContentStorage):
             # Container already exists or other error
             self.logger.debug(f"Container status: {str(e)}")
         
-        self.logger.info(f"Initialized Azure Blob Storage: container={container_name}")
+        self.logger.info(
+            f"Initialized Azure Blob Storage: container={container_name}"
+        )
     
     def store_content(self, reference: str, content: str) -> str:
         """
@@ -81,14 +97,21 @@ class AzureBlobStorage(IContentStorage):
             Blob name as storage key
         """
         # Sanitize blob name - replace problematic characters
-        blob_name = reference.replace('/', '_').replace('\\', '_').replace(' ', '_')
+        blob_name = reference.replace('/', '_').replace('\\', '_')
+        blob_name = blob_name.replace(' ', '_')
         blob_name = f"{blob_name}.html"
+        
+        # Add storage_name prefix for segregation
+        if self.storage_name:
+            blob_name = f"{self.storage_name}/{blob_name}"
         
         # Get blob client and upload
         blob_client = self.container_client.get_blob_client(blob_name)
         blob_client.upload_blob(content, overwrite=True)
         
-        self.logger.debug(f"Stored blob: {blob_name} ({len(content)} bytes)")
+        self.logger.debug(
+            f"Stored blob: {blob_name} ({len(content)} bytes)"
+        )
         
         # Return blob name as storage key
         return blob_name
