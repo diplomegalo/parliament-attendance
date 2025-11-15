@@ -1,26 +1,35 @@
 # Parliament Attendance
 
-Un système complet pour parser les comptes rendus parlementaires avec un backend Python et un frontend Next.js.
+> 🎵 A vibe coding project - built through intuition, iteration, and practical experimentation.
+
+Un système complet pour analyser la présence réelle des ministres belges aux séances parlementaires. Backend Python avec architecture propre, frontend SSG à venir.
 
 ## Structure du Projet
 
-Le projet maintient une séparation claire entre frontend et backend :
+Architecture Clean avec séparation Domain/Application/Infrastructure :
 
 ```
 parliament-attendance/
-├── backend/                # Backend Python
-│   ├── sync_job.py         # Script principal (scraping → parsing → insertion)
-│   ├── models.py           # Modèle de données (classe Minute)
-│   ├── database.py         # Connexion et insertion PostgreSQL
-│   ├── test_simple.py      # Tests unitaires simples
-│   ├── requirements.txt    # Dépendances Python
-│   └── README.md          # Documentation backend
-├── frontend/              # Frontend Next.js
-│   ├── src/               # Code source React/Next.js
-│   ├── package.json       # Dépendances Node.js
-│   └── [configuration files]
-├── schema.sql             # Schéma de base de données
-└── README.md             # Ce fichier
+├── .github/
+│   └── AGENT.md           # Instructions pour agents IA
+├── backend/
+│   ├── domain/            # Entités métier pures
+│   │   ├── entities.py    # SessionReference, ParliamentaryMinute
+│   │   └── repositories.py # Interfaces (ports)
+│   ├── application/
+│   │   └── use_cases.py   # Cas d'usage métier
+│   ├── infrastructure/    # Implémentations (adapters)
+│   │   ├── web_scraper.py
+│   │   ├── database_repository.py
+│   │   ├── local_file_storage.py
+│   │   └── azure_blob_storage.py
+│   ├── tests/             # Tests par couche
+│   ├── sync_job.py        # Point d'entrée (injection de dépendances)
+│   └── requirements.txt
+├── db/
+│   └── schema.sql         # Schéma PostgreSQL
+├── data/                  # Stockage local (gitignored)
+└── README.md
 ```
 
 ## Installation
@@ -45,12 +54,20 @@ psql -d votre_base -f schema.sql
 ## Configuration
 
 Variables d'environnement dans `.env` à la racine :
-```
+```bash
+# Database
 DB_HOST=localhost
 DB_NAME=parliament_attendance
 DB_USER=postgres
 DB_PASSWORD=password
 DB_PORT=5432
+
+# Content Storage ('local' or 'azure')
+CONTENT_STORAGE=local
+
+# Azure Blob Storage (si CONTENT_STORAGE=azure)
+AZURE_STORAGE_CONNECTION_STRING=your_connection_string
+AZURE_STORAGE_CONTAINER_NAME=parliamentary-minutes
 ```
 
 ## Utilisation
@@ -64,7 +81,7 @@ python sync_job.py
 ### Backend - Lancer les tests
 ```bash
 cd backend
-python test_simple.py
+pytest tests/
 ```
 
 ### Frontend - Mode développement
@@ -72,27 +89,39 @@ python test_simple.py
 cd frontend
 npm run dev
 ```
+_(Frontend SSG à implémenter)_
 
 ## Fonctionnalités
 
-### Backend
-- **Scraping web** : Parse automatiquement les comptes rendus parlementaires
-- **Parser de dates** : Utilise `python-dateutil` pour un parsing robuste
-- **Base de données** : Insertion automatique en PostgreSQL avec gestion des doublons
-- **Tests simples** : Validation des composants critiques
+### Backend (Implémenté)
+- **Architecture Clean** : Séparation Domain/Application/Infrastructure
+- **Scraping web** : Récupère automatiquement les comptes rendus du Parlement belge (Législature 56)
+- **Stockage flexible** : Abstraction pour filesystem local (dev) ou Azure Blob Storage (prod)
+- **Base de données** : PostgreSQL pour les métadonnées, contenu HTML séparé
+- **Tests complets** : Tests unitaires (domain), tests d'intégration (infrastructure), mocks (use cases)
+- **Idempotence** : Gestion des versions provisoires vs définitives
 
-### Frontend
-- **Interface web moderne** : Dashboard pour visualiser les données
-- **Next.js + TypeScript** : Stack moderne et typée
-- **Tailwind CSS** : Styling utilitaire
+### Frontend (À venir)
+- **SSG** : Site statique généré mensuellement (Astro, Next.js SSG, ou Hugo)
+- **KPI Ministers** : Taux de présence, votes par ministre
+- **Détails des votes** : Consultation des votes par séance
 
 ## Architecture
 
-Le projet évite la sur-ingénierie tout en maintenant une séparation logique :
-- **Séparation claire** : Backend et frontend distincts
-- **Structure simple** : Pas de packages Python complexes
-- **Dépendances minimales** : Seulement les packages essentiels
-- **Tests ciblés** : Validation des parties critiques uniquement
+Le projet suit les principes de Clean Architecture et DDD tout en restant simple :
+- **Domain-Driven Design** : Entités métier, value objects, interfaces de repositories
+- **Clean Architecture** : Dépendances vers l'intérieur (domain ← application ← infrastructure)
+- **Séparation des préoccupations** : Infrastructure déléguée aux outils externes
+- **Abstraction du stockage** : Changement facile entre local et cloud
+- **TDD** : Tests avant implémentation pour la logique métier
+- **Principe de simplicité** : Code applicatif purement fonctionnel/métier
+
+### Couches
+1. **Domain** : Logique métier pure, aucune dépendance externe
+2. **Application** : Cas d'usage orchestrant les règles métier
+3. **Infrastructure** : Adaptateurs pour base de données, web scraping, stockage
+
+Consulter `.github/AGENT.md` pour les détails d'implémentation et décisions architecturales.
 
 ## Licence
 

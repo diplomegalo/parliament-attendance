@@ -90,10 +90,14 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 
 ## Agent Guidance
 - Use business terms for all class/function names (e.g., `MinisterAttendanceCalculator`, `SessionVoteParser`).
-- Document all new features and architectural decisions.
+- Document all new features and architectural decisions in both AGENT.md and README.md.
+- **Always update README.md** when implementing significant features or architectural changes.
 - Propose SSG frontend options if not specified.
 - Request approval for new dependencies before adding.
 - Ask for clarification if requirements or conventions are unclear.
+
+## Project Philosophy
+**This is a vibe coding project.** Development is guided by intuition, experimentation, and practical results rather than rigid planning. The architecture emerged organically through iterative refinement while maintaining clean code principles.
 
 ---
 For further details, consult AGENT.md, README.md, or ask for clarification.
