@@ -15,9 +15,9 @@ from domain.entities import SessionMetadata, SessionReference
 from domain.repositories import ISessionMetadataRepository, IMinuteContentRetriever
 
 
-class ParliamentaryWebScraper(ISessionMetadataRepository, IMinuteContentRetriever):
+class ParliamentarySessionScraper(ISessionMetadataRepository, IMinuteContentRetriever):
     """
-    Web scraper adapter for Belgian parliament website.
+    Session scraper adapter for Belgian parliament website.
     
     Implements both session metadata retrieval and content retrieval
     using HTTP requests and HTML parsing.

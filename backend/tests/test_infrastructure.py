@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-from infrastructure.web_scraper import ParliamentaryWebScraper
+from infrastructure.session_scraper import ParliamentarySessionScraper
 from domain.entities import SessionMetadata
 
 
@@ -25,7 +25,7 @@ class TestParliamentaryWebScraper(unittest.TestCase):
         with open(mock_file, "r", encoding="utf-8") as f:
             self.mock_html = f.read()
         
-        self.scraper = ParliamentaryWebScraper()
+        self.scraper = ParliamentarySessionScraper()
     
     def test_parse_session_row_with_valid_data(self):
         """Test parsing a valid session row."""

@@ -8,7 +8,7 @@ saving data to verify the scraping and business logic work correctly.
 
 import logging
 from application.use_cases import SynchronizeMinutesUseCase
-from infrastructure.web_scraper import ParliamentaryWebScraper
+from infrastructure.session_scraper import ParliamentarySessionScraper
 from infrastructure.local_file_storage import LocalFileSystemStorage
 
 # Configure detailed logging
@@ -50,8 +50,8 @@ def main():
     
     try:
         # Infrastructure layer
-        logger.info("\n📡 Initializing web scraper...")
-        web_scraper = ParliamentaryWebScraper()
+        logger.info("\n📡 Initializing session scraper...")
+        session_scraper = ParliamentarySessionScraper()
         
         logger.info("💾 Initializing local storage...")
         content_storage = LocalFileSystemStorage('./data/test_minutes')
@@ -62,9 +62,9 @@ def main():
         # Application layer
         logger.info("\n⚙️  Setting up use case with dependencies...")
         use_case = SynchronizeMinutesUseCase(
-            session_metadata_repo=web_scraper,
+            session_metadata_repo=session_scraper,
             minute_repo=mock_repo,
-            content_retriever=web_scraper,
+            content_retriever=session_scraper,
             content_storage=content_storage
         )
         

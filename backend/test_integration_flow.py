@@ -10,7 +10,7 @@ from application.use_cases import (
     SynchronizeMembersUseCase,
     SynchronizeMinutesUseCase
 )
-from infrastructure.web_scraper import ParliamentaryWebScraper
+from infrastructure.session_scraper import ParliamentarySessionScraper
 
 # Configure logging
 logging.basicConfig(
@@ -85,16 +85,16 @@ def test_member_prerequisite_flow():
     
     logger.info("✅ Test 3 passed: Minutes use case accepts legislature")
     
-    # Test 4: Verify web scraper uses legislature parameter
-    scraper_56 = ParliamentaryWebScraper(legislature=56)
-    scraper_57 = ParliamentaryWebScraper(legislature=57)
+    # Test 4: Verify session scraper uses legislature parameter
+    scraper_56 = ParliamentarySessionScraper(legislature=56)
+    scraper_57 = ParliamentarySessionScraper(legislature=57)
     
     assert scraper_56.legislature == 56
     assert scraper_57.legislature == 57
     assert 'legislat=56' in scraper_56.legislature_url
     assert 'legislat=57' in scraper_57.legislature_url
     
-    logger.info("✅ Test 4 passed: Web scraper URLs parameterized")
+    logger.info("✅ Test 4 passed: Session scraper URLs parameterized")
     
     logger.info("🎉 All tests passed!")
 

@@ -14,7 +14,7 @@ from application.use_cases import (
     SynchronizeMinutesUseCase,
     SynchronizeMembersUseCase
 )
-from infrastructure.web_scraper import ParliamentaryWebScraper
+from infrastructure.session_scraper import ParliamentarySessionScraper
 from infrastructure.database_repository import PostgresMinuteRepository
 from infrastructure.member_repository import PostgresMemberRepository
 from infrastructure.member_scraper import ChamberMemberScraper
@@ -80,7 +80,7 @@ def main():
     
     try:
         # Infrastructure layer - adapters for external systems
-        web_scraper = ParliamentaryWebScraper(legislature=legislature)
+        session_scraper = ParliamentarySessionScraper(legislature=legislature)
         database_repo = PostgresMinuteRepository()
         content_storage = create_content_storage()
         member_repo = PostgresMemberRepository()
@@ -97,9 +97,9 @@ def main():
         # Step 2: Synchronize minutes
         logger.info("Step 2: Synchronizing minutes")
         minute_use_case = SynchronizeMinutesUseCase(
-            session_metadata_repo=web_scraper,
+            session_metadata_repo=session_scraper,
             minute_repo=database_repo,
-            content_retriever=web_scraper,
+            content_retriever=session_scraper,
             content_storage=content_storage
         )
         minute_use_case.execute(legislature)

@@ -162,7 +162,7 @@ Le projet suit les principes de Clean Architecture et DDD tout en restant simple
    - `SynchronizeMinutesUseCase` : Synchronisation des comptes rendus
 3. **Infrastructure** : Adaptateurs pour base de données, web scraping, stockage
    - `PostgresMemberRepository`, `PostgresMinuteRepository`
-   - `ChamberMemberScraper`, `ParliamentaryWebScraper`
+   - `ChamberMemberScraper`, `ParliamentarySessionScraper`
    - `LocalFileSystemStorage`, `AzureBlobStorage`
 
 ### Flux d'exécution (sync_job.py)
