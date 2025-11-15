@@ -116,67 +116,84 @@ class MinuteTextCleaner:
     
     def _filter_to_voting_sections(self, html_content: str) -> Optional[str]:
         """
-        Filter HTML to include only voting sections.
+        Filter HTML to extract only vote nominatif and DETAIL sections.
         
-        Searches for the earliest occurrence of vote-related markers:
-        - "Stemming/vote N" (vote results)
-        - "Naamstemming - Vote nominatif: N" (nominal votes)
-        - "DETAIL VAN DE NAAMSTEMMINGEN" (Dutch detail section)
-        - "DETAIL DES VOTES NOMINATIFS" (French detail section)
+        Two-phase extraction:
+        1. Vote nominatif: Individual vote results with "(Stemming/vote N)"
+        2. DETAIL section: Member names organized by vote number
         
-        Returns all HTML content from that point onward, preserving:
-        - Vote titles and numbers
-        - Voting process text
-        - Vote results tables
-        - Member name lists
-        - Both Dutch and French bilingual content
+        Searches for markers:
+        - "(Stemming/vote N)" - vote results with topics
+        - "DETAIL VAN DE NAAMSTEMMINGEN" / "DETAIL DES VOTES NOMINATIFS"
         
         Args:
             html_content: Raw HTML from parliamentary minute
             
         Returns:
-            Filtered HTML containing only voting sections,
+            Filtered HTML with vote topics and member details,
             or None if no voting markers found
         """
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Vote marker patterns (case-insensitive, flexible spacing)
-        vote_patterns = [
-            re.compile(r'Stemming/vote\s+\d+', re.IGNORECASE),
-            re.compile(r'Naamstemming.*Vote nominatif', re.IGNORECASE),
-            re.compile(r'DETAIL VAN DE NAAMSTEMMINGEN', re.IGNORECASE),
-            re.compile(r'DETAIL DES VOTES NOMINATIFS', re.IGNORECASE)
-        ]
+        # Patterns for vote sections
+        stemming_pattern = re.compile(
+            r'\(Stemming/vote\s+\d+\)',
+            re.IGNORECASE
+        )
+        detail_pattern = re.compile(
+            r'DETAIL (VAN DE NAAMSTEMMINGEN|DES VOTES NOMINATIFS)',
+            re.IGNORECASE
+        )
         
-        # Find all elements that could contain vote markers
-        all_elements = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div'])
-        
-        # Search for the first occurrence of any vote marker
+        # Find the first element containing a vote marker
         first_vote_element = None
-        for element in all_elements:
-            text = element.get_text(strip=True)
-            for pattern in vote_patterns:
-                if pattern.search(text):
-                    first_vote_element = element
-                    break
-            if first_vote_element:
+        detail_element = None
+        
+        # Search through all elements in document order
+        for element in soup.find_all(['p', 'h1', 'h2', 'table']):
+            text = element.get_text()
+            
+            # Check for first vote
+            if first_vote_element is None and stemming_pattern.search(text):
+                first_vote_element = element
+            
+            # Check for DETAIL section
+            if detail_element is None and detail_pattern.search(text):
+                detail_element = element
+            
+            # Stop if we found both
+            if first_vote_element and detail_element:
                 break
         
-        # No voting sections found
-        if not first_vote_element:
+        # No votes found
+        if first_vote_element is None and detail_element is None:
             return None
         
-        # Create new soup with filtered content
-        # Extract all siblings after (and including) the first vote element
-        filtered_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
+        # Create filtered soup
+        filtered_soup = BeautifulSoup(
+            '<html><body></body></html>',
+            'html.parser'
+        )
         body = filtered_soup.body
         
-        # Add the first vote element and all following siblings
-        current = first_vote_element
+        # Start from whichever comes first
+        start_element = first_vote_element or detail_element
+        
+        # Add the starting element and all its following siblings
+        current = start_element
         while current:
-            # Clone and append the element
             body.append(current.__copy__())
             current = current.find_next_sibling()
+        
+        # If DETAIL is in a different parent, add it too
+        if detail_element and detail_element != start_element:
+            # Check if detail_element is already included
+            if not filtered_soup.find(text=detail_pattern):
+                # DETAIL is in a different section, add it
+                current = detail_element
+                while current:
+                    body.append(current.__copy__())
+                    current = current.find_next_sibling()
         
         return str(filtered_soup)
     
