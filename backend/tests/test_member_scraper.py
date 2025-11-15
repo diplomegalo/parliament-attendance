@@ -21,8 +21,6 @@ class TestParliamentMember(unittest.TestCase):
             full_name="De Croo Alexander",
             last_name="De Croo",
             first_name="Alexander",
-            party="OpenVLD",
-            constituency="Oost-Vlaanderen",
             legislature=56
         )
         
@@ -30,7 +28,6 @@ class TestParliamentMember(unittest.TestCase):
         self.assertEqual(member.full_name, "De Croo Alexander")
         self.assertEqual(member.last_name, "De Croo")
         self.assertEqual(member.first_name, "Alexander")
-        self.assertEqual(member.party, "OpenVLD")
         self.assertEqual(member.legislature, 56)
     
     def test_name_normalization(self):
@@ -40,8 +37,6 @@ class TestParliamentMember(unittest.TestCase):
             full_name="Van  den   Heuvel    Koen",
             last_name="Van  den   Heuvel",
             first_name="  Koen  ",
-            party="N-VA",
-            constituency="Antwerpen",
             legislature=56
         )
         
@@ -58,8 +53,6 @@ class TestParliamentMember(unittest.TestCase):
                 full_name="Test Member",
                 last_name="Test",
                 first_name="Member",
-                party="Party",
-                constituency="District",
                 legislature=0
             )
         
@@ -71,8 +64,6 @@ class TestParliamentMember(unittest.TestCase):
                 full_name="Test Member",
                 last_name="Test",
                 first_name="Member",
-                party="Party",
-                constituency="District",
                 legislature=-5
             )
 
@@ -166,8 +157,6 @@ class TestChamberMemberScraper(unittest.TestCase):
                             De Croo Alexander
                         </a>
                     </td>
-                    <td>OpenVLD</td>
-                    <td>Oost-Vlaanderen</td>
                 </tr>
                 <tr>
                     <td>
@@ -175,8 +164,6 @@ class TestChamberMemberScraper(unittest.TestCase):
                             Almaci Meyrem
                         </a>
                     </td>
-                    <td>Groen</td>
-                    <td>Brussel</td>
                 </tr>
                 <tr>
                     <td>Not a link</td>
@@ -201,14 +188,11 @@ class TestChamberMemberScraper(unittest.TestCase):
         self.assertEqual(members[0].full_name, "De Croo Alexander")
         self.assertEqual(members[0].last_name, "De Croo")
         self.assertEqual(members[0].first_name, "Alexander")
-        self.assertEqual(members[0].party, "OpenVLD")
-        self.assertEqual(members[0].constituency, "Oost-Vlaanderen")
         self.assertEqual(members[0].legislature, 56)
         
         # Check second member
         self.assertEqual(members[1].member_id, "456")
         self.assertEqual(members[1].full_name, "Almaci Meyrem")
-        self.assertEqual(members[1].party, "Groen")
     
     def test_parse_empty_table(self):
         """Test parsing with no valid member data."""

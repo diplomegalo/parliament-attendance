@@ -122,8 +122,6 @@ class PostgresMemberRepository(IMemberRepository):
                     member.full_name,
                     member.last_name,
                     member.first_name,
-                    member.party,
-                    member.constituency,
                 )
                 for member in members
             ]
@@ -135,17 +133,13 @@ class PostgresMemberRepository(IMemberRepository):
                     legislature,
                     full_name,
                     last_name,
-                    first_name,
-                    party,
-                    constituency
+                    first_name
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (member_id, legislature) DO UPDATE SET
                     full_name = EXCLUDED.full_name,
                     last_name = EXCLUDED.last_name,
                     first_name = EXCLUDED.first_name,
-                    party = EXCLUDED.party,
-                    constituency = EXCLUDED.constituency,
                     updated_at = CURRENT_TIMESTAMP
             """, member_data)
             

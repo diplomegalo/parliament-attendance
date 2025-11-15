@@ -5,7 +5,6 @@ This infrastructure adapter stores content files on the local disk,
 suitable for development environments.
 """
 
-import os
 import logging
 from pathlib import Path
 from domain.repositories import IContentStorage
@@ -25,10 +24,12 @@ class LocalFileSystemStorage(IContentStorage):
         
         Args:
             base_path: Base directory for storing files. 
-                      Defaults to ./data/minutes
+                      Defaults to /workspaces/parliament-attendance/data/minutes
         """
         if base_path is None:
-            base_path = os.getenv('LOCAL_STORAGE_PATH', './data/minutes')
+            # Always use absolute path from workspace root
+            workspace_root = Path(__file__).parent.parent.parent.parent
+            base_path = workspace_root / 'data' / 'minutes'
         
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)

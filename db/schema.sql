@@ -35,8 +35,6 @@ CREATE TABLE IF NOT EXISTS members(
     full_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     first_name VARCHAR(255) NOT NULL,
-    party VARCHAR(100),
-    constituency VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(member_id, legislature)

@@ -13,7 +13,7 @@
       "enableNonRootDocker": "true"
     },
     "ghcr.io/devcontainers/features/sshd:1": {},
-    "ghcr.io/devcontainers/features/postgres:1": {
+    "ghcr.io/itsmechlark/features/postgresql:1": {
       "version": "latest",
       "installPostgresClient": true
     }

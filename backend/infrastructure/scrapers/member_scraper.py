@@ -27,16 +27,12 @@ class ParliamentMember:
         full_name: Complete name (LastName FirstName)
         last_name: Family name
         first_name: Given name(s)
-        party: Political party abbreviation
-        constituency: Electoral district
         legislature: Legislature number (e.g., 56)
     """
     member_id: str
     full_name: str
     last_name: str
     first_name: str
-    party: str
-    constituency: str
     legislature: int
     
     def __post_init__(self):
@@ -156,8 +152,6 @@ class ChamberMemberScraper:
         <table>
           <tr>
             <td><a href="...key=XXX">LastName FirstName</a></td>
-            <td>Party</td>
-            <td>Constituency</td>
           </tr>
         </table>
         """
@@ -200,19 +194,11 @@ class ChamberMemberScraper:
                 # Parse name into last/first
                 last_name, first_name = self._parse_name(full_name)
                 
-                # Extract party and constituency
-                party = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                constituency = (
-                    cells[2].get_text(strip=True) if len(cells) > 2 else ""
-                )
-                
                 member = ParliamentMember(
                     member_id=member_id,
                     full_name=full_name,
                     last_name=last_name,
                     first_name=first_name,
-                    party=party,
-                    constituency=constituency,
                     legislature=legislature
                 )
                 
