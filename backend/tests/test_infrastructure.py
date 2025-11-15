@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-from infrastructure.session_scraper import ParliamentarySessionScraper
+from infrastructure.scrapers.session_scraper import ParliamentarySessionScraper
 from domain.entities import SessionMetadata
 
 

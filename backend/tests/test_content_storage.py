@@ -9,7 +9,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from infrastructure.local_file_storage import LocalFileSystemStorage
+from infrastructure.storage.local_file_storage import LocalFileSystemStorage
 
 
 class TestLocalFileSystemStorage(unittest.TestCase):

@@ -4,7 +4,7 @@ Unit tests for member scraper infrastructure.
 
 import unittest
 from pathlib import Path
-from infrastructure.member_scraper import (
+from infrastructure.scrapers.member_scraper import (
     ChamberMemberScraper,
     ParliamentMember,
     load_members_from_file

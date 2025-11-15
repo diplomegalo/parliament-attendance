@@ -14,7 +14,7 @@ Usage:
 import sys
 import logging
 from pathlib import Path
-from infrastructure.member_scraper import load_members_from_file
+from infrastructure.scrapers.member_scraper import load_members_from_file
 
 # Configure logging
 logging.basicConfig(

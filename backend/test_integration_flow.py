@@ -10,7 +10,7 @@ from application.use_cases import (
     SynchronizeMembersUseCase,
     SynchronizeMinutesUseCase
 )
-from infrastructure.session_scraper import ParliamentarySessionScraper
+from infrastructure.scrapers.session_scraper import ParliamentarySessionScraper
 
 # Configure logging
 logging.basicConfig(

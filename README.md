@@ -19,10 +19,15 @@ parliament-attendance/
 │   ├── application/
 │   │   └── use_cases.py   # Cas d'usage métier
 │   ├── infrastructure/    # Implémentations (adapters)
-│   │   ├── web_scraper.py
-│   │   ├── database_repository.py
-│   │   ├── local_file_storage.py
-│   │   └── azure_blob_storage.py
+│   │   ├── repositories/  # PostgreSQL repositories
+│   │   │   ├── minute_repository.py
+│   │   │   └── member_repository.py
+│   │   ├── storage/       # File/blob storage
+│   │   │   ├── local_file_storage.py
+│   │   │   └── azure_blob_storage.py
+│   │   └── scrapers/      # Web scrapers
+│   │       ├── session_scraper.py
+│   │       └── member_scraper.py
 │   ├── tests/             # Tests par couche
 │   ├── sync_job.py        # Point d'entrée (injection de dépendances)
 │   └── requirements.txt
@@ -161,9 +166,9 @@ Le projet suit les principes de Clean Architecture et DDD tout en restant simple
    - `SynchronizeMembersUseCase` : Vérification/scraping prérequis membres
    - `SynchronizeMinutesUseCase` : Synchronisation des comptes rendus
 3. **Infrastructure** : Adaptateurs pour base de données, web scraping, stockage
-   - `PostgresMemberRepository`, `PostgresMinuteRepository`
-   - `ChamberMemberScraper`, `ParliamentarySessionScraper`
-   - `LocalFileSystemStorage`, `AzureBlobStorage`
+   - **Repositories** : `PostgresMemberRepository`, `PostgresMinuteRepository`
+   - **Scrapers** : `ChamberMemberScraper`, `ParliamentarySessionScraper`
+   - **Storage** : `LocalFileSystemStorage`, `AzureBlobStorage`
 
 ### Flux d'exécution (sync_job.py)
 ```

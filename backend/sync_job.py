@@ -14,12 +14,12 @@ from application.use_cases import (
     SynchronizeMinutesUseCase,
     SynchronizeMembersUseCase
 )
-from infrastructure.session_scraper import ParliamentarySessionScraper
-from infrastructure.database_repository import PostgresMinuteRepository
-from infrastructure.member_repository import PostgresMemberRepository
-from infrastructure.member_scraper import ChamberMemberScraper
-from infrastructure.local_file_storage import LocalFileSystemStorage
-from infrastructure.azure_blob_storage import AzureBlobStorage
+from infrastructure.scrapers.session_scraper import ParliamentarySessionScraper
+from infrastructure.repositories.minute_repository import PostgresMinuteRepository
+from infrastructure.repositories.member_repository import PostgresMemberRepository
+from infrastructure.scrapers.member_scraper import ChamberMemberScraper
+from infrastructure.storage.local_file_storage import LocalFileSystemStorage
+from infrastructure.storage.azure_blob_storage import AzureBlobStorage
 
 # Configure logging
 logging.basicConfig(

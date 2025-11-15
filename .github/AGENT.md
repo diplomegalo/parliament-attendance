@@ -83,7 +83,13 @@ Create a resilient, idempotent web application to retrieve and analyze true atte
 - Handle business rules like "don't overwrite definitive minutes" and "members must exist before processing minutes"
 
 **Infrastructure Layer** (`backend/infrastructure/`):
-- Concrete implementations (adapters): `ParliamentarySessionScraper`, `PostgresMinuteRepository`, `PostgresMemberRepository`, `ChamberMemberScraper`, `LocalFileSystemStorage`, `AzureBlobStorage`
+- Organized into three namespaces:
+  - **`repositories/`** : Database persistence implementations
+    - `PostgresMinuteRepository`, `PostgresMemberRepository`
+  - **`scrapers/`** : Web scraping implementations
+    - `ParliamentarySessionScraper`, `ChamberMemberScraper`
+  - **`storage/`** : File/blob storage implementations
+    - `LocalFileSystemStorage`, `AzureBlobStorage`
 - Session scraper accepts legislature parameter and dynamically constructs URLs
 - External dependencies: `psycopg2`, `beautifulsoup4`, `requests`, `azure-storage-blob`
 - Main entry point (`sync_job.py`) wires dependencies together and executes two-step process:

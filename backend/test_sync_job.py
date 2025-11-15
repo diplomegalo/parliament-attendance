@@ -8,8 +8,8 @@ saving data to verify the scraping and business logic work correctly.
 
 import logging
 from application.use_cases import SynchronizeMinutesUseCase
-from infrastructure.session_scraper import ParliamentarySessionScraper
-from infrastructure.local_file_storage import LocalFileSystemStorage
+from infrastructure.scrapers.session_scraper import ParliamentarySessionScraper
+from infrastructure.storage.local_file_storage import LocalFileSystemStorage
 
 # Configure detailed logging
 logging.basicConfig(
