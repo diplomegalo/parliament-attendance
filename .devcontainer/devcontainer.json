@@ -13,6 +13,16 @@
     "ghcr.io/devcontainers/features/sshd:1": {}
   },
 
+	// Forward SSH agent from host to container
+	"remoteEnv": {
+		"SSH_AUTH_SOCK": "/tmp/ssh-agent.sock"
+	},
+
+	// Mount SSH agent socket
+	"mounts": [
+		"source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock,type=bind"
+	],
+
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// This can be used to network with other containers or the host.
 	"forwardPorts": [5432],
