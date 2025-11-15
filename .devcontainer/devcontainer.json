@@ -9,18 +9,14 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "enableNonRootDocker": "true"
+    },
     "ghcr.io/devcontainers/features/sshd:1": {}
   },
 
-	// Forward SSH agent from host to container
-	"remoteEnv": {
-		"SSH_AUTH_SOCK": "/tmp/ssh-agent.sock"
-	},
-
-	// Mount SSH agent socket and SSH keys
+	// Mount SSH keys for Git authentication
 	"mounts": [
-		"source=${localEnv:SSH_AUTH_SOCK},target=/tmp/ssh-agent.sock,type=bind",
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached,readonly"
 	],
 
