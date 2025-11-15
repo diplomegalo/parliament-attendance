@@ -46,7 +46,8 @@ class TestSessionMetadata(unittest.TestCase):
             date=date,
             description="Séance plénière",
             document_url="/path/to/doc",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
         
         self.assertEqual(metadata.reference, ref)
@@ -64,7 +65,8 @@ class TestSessionMetadata(unittest.TestCase):
                 date=datetime(2024, 11, 14),
                 description="",
                 document_url="/path",
-                is_provisional=True
+                is_provisional=True,
+                legislature=56
             )
     
     def test_empty_url_raises_error(self):
@@ -77,8 +79,28 @@ class TestSessionMetadata(unittest.TestCase):
                 date=datetime(2024, 11, 14),
                 description="Session",
                 document_url="",
-                is_provisional=True
+                is_provisional=True,
+                legislature=56
             )
+    
+    def test_invalid_legislature_raises_error(self):
+        """Test that invalid legislature raises ValueError."""
+        ref = SessionReference("CRIV 56 COM 123")
+        
+        with self.assertRaises(ValueError) as context:
+            SessionMetadata(
+                reference=ref,
+                date=datetime(2024, 11, 14),
+                description="Session",
+                document_url="/path",
+                is_provisional=True,
+                legislature=0
+            )
+        
+        self.assertIn(
+            "Legislature must be a positive integer",
+            str(context.exception)
+        )
 
 
 class TestParliamentaryMinute(unittest.TestCase):
@@ -91,7 +113,8 @@ class TestParliamentaryMinute(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Séance plénière",
             document_url="/path/to/doc",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
     
     def test_valid_minute(self):
@@ -132,7 +155,8 @@ class TestParliamentaryMinute(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Séance",
             document_url="/path",
-            is_provisional=False
+            is_provisional=False,
+            legislature=56
         )
         
         minute = ParliamentaryMinute(

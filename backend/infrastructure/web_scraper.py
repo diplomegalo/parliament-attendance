@@ -30,8 +30,15 @@ class ParliamentaryWebScraper(ISessionMetadataRepository, IMinuteContentRetrieve
         "type=plen&cricra=CRI&count=all&legislat=56"
     )
     
-    def __init__(self):
+    def __init__(self, legislature: int = 56):
+        """
+        Initialize web scraper.
+        
+        Args:
+            legislature: Legislature number (default 56)
+        """
         self.logger = logging.getLogger(__name__)
+        self.legislature = legislature
     
     def retrieve_all_sessions(self) -> List[SessionMetadata]:
         """
@@ -121,7 +128,8 @@ class ParliamentaryWebScraper(ISessionMetadataRepository, IMinuteContentRetrieve
             date=session_date,
             description=description,
             document_url=document_url,
-            is_provisional=is_provisional
+            is_provisional=is_provisional,
+            legislature=self.legislature
         )
     
     def _parse_french_date(self, date_str: str) -> datetime:

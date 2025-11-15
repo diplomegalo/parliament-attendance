@@ -47,7 +47,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Provisional session",
             document_url="/prov001",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
         
         self.session_repo.retrieve_all_sessions.return_value = [provisional_metadata]
@@ -73,7 +74,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Definitive session 1",
             document_url="/def001",
-            is_provisional=False
+            is_provisional=False,
+            legislature=56
         )
         
         definitive2 = SessionMetadata(
@@ -81,7 +83,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 15),
             description="Definitive session 2",
             document_url="/def002",
-            is_provisional=False
+            is_provisional=False,
+            legislature=56
         )
         
         self.session_repo.retrieve_all_sessions.return_value = [definitive1, definitive2]
@@ -108,7 +111,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Provisional",
             document_url="/prov001",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
         
         existing_def = SessionMetadata(
@@ -116,7 +120,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 15),
             description="Existing definitive",
             document_url="/def001",
-            is_provisional=False
+            is_provisional=False,
+            legislature=56
         )
         
         new_def = SessionMetadata(
@@ -124,7 +129,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 16),
             description="New definitive",
             document_url="/def002",
-            is_provisional=False
+            is_provisional=False,
+            legislature=56
         )
         
         self.session_repo.retrieve_all_sessions.return_value = [
@@ -155,7 +161,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 14),
             description="Session 1",
             document_url="/s001",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
         
         session2 = SessionMetadata(
@@ -163,7 +170,8 @@ class TestSynchronizeMinutesUseCase(unittest.TestCase):
             date=datetime(2024, 11, 15),
             description="Session 2",
             document_url="/s002",
-            is_provisional=True
+            is_provisional=True,
+            legislature=56
         )
         
         self.session_repo.retrieve_all_sessions.return_value = [session1, session2]

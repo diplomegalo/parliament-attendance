@@ -36,12 +36,15 @@ class SessionMetadata:
     description: str
     document_url: str
     is_provisional: bool
+    legislature: int
     
     def __post_init__(self):
         if not self.description:
             raise ValueError("Session description cannot be empty")
         if not self.document_url:
             raise ValueError("Document URL cannot be empty")
+        if self.legislature < 1:
+            raise ValueError("Legislature must be a positive integer")
 
 
 @dataclass
