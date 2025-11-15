@@ -89,9 +89,59 @@ CONTENT_STORAGE=local
 # Azure Blob Storage (si CONTENT_STORAGE=azure)
 AZURE_STORAGE_CONNECTION_STRING=your_connection_string
 AZURE_STORAGE_CONTAINER_NAME=parliamentary-minutes
+
+# LLM Provider (un des suivants requis pour compute_attendance_job)
+OPENAI_API_KEY=sk-proj-xxxxx                    # OpenAI (recommandé)
+# AZURE_OPENAI_ENDPOINT=https://xxx.openai.azure.com/  # Azure OpenAI
+# AZURE_OPENAI_API_KEY=xxxxx
+
+# Optional: Fuzzy matching threshold (0-100, default: 85)
+FUZZY_MATCH_THRESHOLD=85
+```
+
+**Note**: Copiez `.env.example` pour commencer :
+```bash
+cp .env.example .env
 ```
 
 ## Utilisation
+
+### Pipeline Complet
+
+Le système fonctionne en trois étapes :
+
+#### 1. Synchronisation (Scraping)
+Récupère les membres et comptes rendus depuis lachambre.be
+
+```bash
+cd backend
+LEGISLATURE=56 python sync_job.py
+```
+
+#### 2. Nettoyage du Texte
+Convertit le HTML en texte clair
+
+```bash
+cd backend
+LEGISLATURE=56 python extract_attendance_job.py
+```
+
+#### 3. Extraction IA (Nouveau ✨)
+Utilise l'IA pour extraire les présences et votes
+
+```bash
+# Configurer votre clé API OpenAI dans .env
+echo "OPENAI_API_KEY=sk-proj-xxxxx" >> .env
+
+# Extraire les présences avec IA
+cd backend
+LEGISLATURE=56 python compute_attendance_job.py
+
+# Pour une minute spécifique
+LEGISLATURE=56 MINUTE_REF=0001 python compute_attendance_job.py
+```
+
+**Voir [docs/AI_EXTRACTION.md](docs/AI_EXTRACTION.md) pour plus de détails sur l'extraction IA**
 
 ### Synchronisation avec vérification prérequis membres
 
@@ -131,17 +181,26 @@ _(Frontend SSG à implémenter)_
 
 ### Backend (Implémenté)
 - **Architecture Clean** : Séparation Domain/Application/Infrastructure
+- **Extraction IA** ✨ : Extraction intelligente des présences avec OpenAI/Azure OpenAI
+  - **Abstraction LLM** : Support multi-providers (OpenAI, Azure OpenAI, Anthropic, Ollama)
+  - **Fuzzy matching** : Correspondance intelligente des noms (RapidFuzz)
+  - **Scoring de confiance** : Combine LLM + fuzzy matching pour fiabilité
+- **Pipeline en 3 étapes** :
+  1. Scraping des comptes rendus HTML
+  2. Nettoyage texte (HTML → plain text)
+  3. Extraction IA (présences + votes)
 - **Vérification prérequis membres** : Vérifie automatiquement l'existence de la liste des membres avant traitement
 - **Scraping automatique membres** : Si absents, scrape depuis `lachambre.be` et sauvegarde
 - **Multi-législature** : Support pour différentes législatures via variable `LEGISLATURE`
-- **Scraping web** : Récupère automatiquement les comptes rendus du Parlement belge
 - **Stockage flexible** : Abstraction pour filesystem local (dev) ou Azure Blob Storage (prod)
-- **Base de données** : PostgreSQL pour métadonnées (minutes + membres), contenu HTML séparé
+- **Base de données** : PostgreSQL pour métadonnées (minutes + membres + présences), contenu séparé
 - **Tests complets** : Tests unitaires (domain), tests d'intégration (infrastructure), mocks (use cases)
-- **Idempotence** : Gestion des versions provisoires vs définitives
-- **Deux cas d'usage distincts** :
+- **Idempotence** : Gestion des versions provisoires vs définitives, safe re-runs
+- **Cas d'usage distincts** :
   - `SynchronizeMembersUseCase` : Gestion liste des membres
   - `SynchronizeMinutesUseCase` : Gestion des comptes rendus
+  - `ExtractAttendanceUseCase` : Nettoyage texte HTML
+  - (À venir) `ComputeAttendanceUseCase` : Extraction IA
 
 ### Frontend (À venir)
 - **SSG** : Site statique généré mensuellement (Astro, Next.js SSG, ou Hugo)
