@@ -42,13 +42,14 @@ load_dotenv()
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from infrastructure.storage.local_content_storage import LocalContentStorage
+from infrastructure.storage.local_file_storage import LocalFileSystemStorage
 from infrastructure.repositories.minute_repository import PostgresMinuteRepository
-from infrastructure.repositories.cleaned_text_repository import PostgresCleanedTextRepository
+from infrastructure.repositories.cleaned_text_repository import PostgreSQLCleanedTextRepository
 from infrastructure.repositories.member_repository import PostgresMemberRepository
-from infrastructure.repositories.attendance_repository import PostgresAttendanceRepository
+from infrastructure.repositories.attendance_repository import PostgreSQLAttendanceRepository
 from infrastructure.ai.llm_factory import LLMFactory
 from infrastructure.matchers.member_name_matcher import MemberNameMatcher
+from infrastructure.parsers.llm_attendance_parser import LLMAttendanceParser
 from domain.repositories import (
     ILLMClient,
     LLMError,
@@ -60,8 +61,7 @@ from domain.repositories import (
 def compute_attendance_for_minute(
     minute_ref: str,
     legislature: int,
-    llm_client: ILLMClient,
-    member_matcher: MemberNameMatcher,
+    attendance_parser: LLMAttendanceParser,
     reprocess: bool = False
 ) -> bool:
     """
@@ -70,8 +70,7 @@ def compute_attendance_for_minute(
     Args:
         minute_ref: Minute reference (e.g., "0001")
         legislature: Legislature number
-        llm_client: LLM client for text analysis
-        member_matcher: Fuzzy matcher for member names
+        attendance_parser: Parser with LLM client and member matcher
         reprocess: Whether to reprocess if already computed
         
     Returns:
@@ -82,161 +81,49 @@ def compute_attendance_for_minute(
     print(f"{'='*80}\n")
     
     # Initialize repositories
-    content_storage = LocalContentStorage()
-    minute_repo = PostgresMinuteRepository()
-    cleaned_text_repo = PostgresCleanedTextRepository()
-    attendance_repo = PostgresAttendanceRepository()
+    content_storage = LocalFileSystemStorage()
+    cleaned_text_repo = PostgreSQLCleanedTextRepository()
+    # Note: attendance_repo not used in dry run mode
     
     try:
-        # 1. Check if already processed
-        if not reprocess:
-            existing_count = attendance_repo.count_by_minute(minute_ref, legislature)
-            if existing_count > 0:
-                print(f"⏭️  Minute {minute_ref} already has {existing_count} attendance records. Skipping.")
-                print("   Use REPROCESS=true to reprocess.")
-                return True
-        
-        # 2. Load cleaned text
+        # 1. Check if already processed (skip for now)
         print("📖 Loading cleaned text...")
-        cleaned_record = cleaned_text_repo.find_by_minute(minute_ref, legislature)
+        cleaned_record = cleaned_text_repo.find_by_minute_ref(minute_ref)
         if not cleaned_record:
             print(f"❌ No cleaned text found for minute {minute_ref}")
             return False
         
         # Load text content
-        text_content = content_storage.retrieve(cleaned_record.storage_key)
+        text_content = content_storage.retrieve_content(
+            cleaned_record.content_storage_key
+        )
         if not text_content:
-            print(f"❌ Failed to load text content from {cleaned_record.storage_key}")
+            print(
+                f"❌ Failed to load text content "
+                f"from {cleaned_record.content_storage_key}"
+            )
             return False
         
         print(f"✅ Loaded {len(text_content)} characters of cleaned text")
         
-        # 3. Truncate text if too long (manage token costs)
-        MAX_CHARS = 15000
-        if len(text_content) > MAX_CHARS:
-            print(f"⚠️  Text too long ({len(text_content)} chars), truncating to {MAX_CHARS}")
-            text_content = text_content[:MAX_CHARS] + "\n\n[... text truncated for token management ...]"
-        
-        # 4. Prepare LLM prompt
-        print("\n🤖 Preparing LLM prompt for attendance extraction...")
-        prompt = f"""
-You are analyzing Belgian parliamentary minutes to extract member attendance information.
-
-Extract all parliament members mentioned in the text below. For each member, identify:
-1. Their full name (as written in the text)
-2. Whether they spoke during the session (true/false)
-3. A confidence score (0.0-1.0) for the identification
-
-Guidelines:
-- Only include actual parliament members (MPs), not government ministers or guests
-- A member is "present" if they are mentioned in any capacity during the session
-- Set spoke=true only if the member actively spoke or intervened
-- Be conservative with confidence scores - use 1.0 only for exact, unambiguous matches
-- If you see name variations (e.g., "M. Dupont" and "Dupont"), list only once with highest confidence
-
-Parliamentary minute text:
-{text_content}
-
-Respond with valid JSON matching this exact structure:
-{{
-    "members": [
-        {{
-            "name": "Full name as written in text",
-            "spoke": true or false,
-            "confidence": 0.0 to 1.0
-        }}
-    ]
-}}
-"""
-        
-        # 5. Extract attendance data using LLM
-        print("🔍 Extracting attendance data with LLM...")
-        
-        schema = {
-            "type": "object",
-            "properties": {
-                "members": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "spoke": {"type": "boolean"},
-                            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
-                        },
-                        "required": ["name", "spoke", "confidence"]
-                    }
-                }
-            },
-            "required": ["members"]
-        }
-        
-        result = llm_client.extract_structured_data(
-            prompt=prompt,
-            schema=schema,
-            temperature=0.0  # Deterministic for consistency
+        # 3. Use parser to extract attendance
+        attendances = attendance_parser.parse_attendance(
+            minute_text=text_content,
+            session_ref=minute_ref,
+            legislature=legislature
         )
         
-        extracted_members = result.get("members", [])
-        print(f"✅ LLM extracted {len(extracted_members)} member records")
-        
-        # 6. Match names to database members using fuzzy matching
-        print("\n🔗 Matching names to database members...")
-        matched_count = 0
-        unmatched_names = []
-        confidence_scores = []
-        
-        for member_data in extracted_members:
-            name = member_data["name"]
-            spoke = member_data["spoke"]
-            llm_confidence = member_data["confidence"]
-            
-            # Try fuzzy matching
-            match_result = member_matcher.find_member_by_name(name, legislature)
-            
-            if match_result:
-                member_id, match_confidence = match_result
-                
-                # Combine LLM confidence with fuzzy match confidence
-                # Use minimum of both as final confidence
-                final_confidence = min(llm_confidence, match_confidence / 100.0)
-                confidence_scores.append(final_confidence)
-                
-                # Store attendance record
-                # TODO: Implement attendance_repo.create() method
-                # attendance_repo.create(
-                #     minute_ref=minute_ref,
-                #     legislature=legislature,
-                #     member_id=member_id,
-                #     spoke=spoke,
-                #     confidence=final_confidence
-                # )
-                
-                matched_count += 1
-                print(f"  ✓ Matched: {name} → Member ID {member_id} "
-                      f"(LLM: {llm_confidence:.2f}, Fuzzy: {match_confidence:.0f}, Final: {final_confidence:.2f})")
-            else:
-                unmatched_names.append(name)
-                print(f"  ✗ No match: {name} (confidence too low or not found)")
-        
-        # 7. Report statistics
+        # 4. Report statistics
         print(f"\n{'='*80}")
         print(f"📊 RESULTS FOR MINUTE {minute_ref}")
         print(f"{'='*80}")
-        print(f"Total extracted: {len(extracted_members)}")
-        print(f"Matched: {matched_count}")
-        print(f"Unmatched: {len(unmatched_names)}")
+        print(f"Total matched: {len(attendances)}")
         
-        if confidence_scores:
-            avg_confidence = sum(confidence_scores) / len(confidence_scores)
+        if attendances:
+            spoke_count = sum(1 for a in attendances if a['spoke'])
+            avg_confidence = sum(a['confidence'] for a in attendances) / len(attendances)
+            print(f"Members who spoke: {spoke_count}")
             print(f"Average confidence: {avg_confidence:.2f}")
-        
-        if unmatched_names:
-            print(f"\nUnmatched names:")
-            for name in unmatched_names[:10]:  # Show first 10
-                print(f"  - {name}")
-            if len(unmatched_names) > 10:
-                print(f"  ... and {len(unmatched_names) - 10} more")
         
         print(f"{'='*80}\n")
         
@@ -266,17 +153,20 @@ def main():
     minute_ref = os.getenv("MINUTE_REF")
     legislature = int(os.getenv("LEGISLATURE", "56"))
     reprocess = os.getenv("REPROCESS", "").lower() == "true"
+    dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
     
     print("🏛️  COMPUTE ATTENDANCE JOB")
     print(f"Legislature: {legislature}")
     print(f"Reprocess: {reprocess}")
+    print(f"Dry Run: {dry_run}")
     
     # Initialize LLM client
     try:
         print("\n🔧 Initializing LLM client...")
         llm_client = LLMFactory.create_client()
-        print(f"✅ LLM client created successfully")
-        print(f"   Available models: {', '.join(llm_client.get_available_models()[:3])}")
+        print("✅ LLM client created successfully")
+        models = llm_client.get_available_models()[:3]
+        print(f"   Available models: {', '.join(models)}")
     except ValueError as e:
         print(f"❌ LLM Configuration Error: {e}")
         sys.exit(1)
@@ -284,11 +174,15 @@ def main():
         print(f"❌ Failed to initialize LLM client: {e}")
         sys.exit(1)
     
-    # Initialize member name matcher
+    # Initialize member name matcher and parser
     print("🔧 Initializing member name matcher...")
     member_repo = PostgresMemberRepository()
     member_matcher = MemberNameMatcher(member_repo, threshold=85)
     print("✅ Member matcher ready")
+    
+    print("🔧 Initializing attendance parser...")
+    attendance_parser = LLMAttendanceParser(llm_client, member_matcher)
+    print("✅ Attendance parser ready")
     
     # Process minutes
     if minute_ref:
@@ -296,8 +190,7 @@ def main():
         success = compute_attendance_for_minute(
             minute_ref=minute_ref,
             legislature=legislature,
-            llm_client=llm_client,
-            member_matcher=member_matcher,
+            attendance_parser=attendance_parser,
             reprocess=reprocess
         )
         sys.exit(0 if success else 1)
@@ -316,8 +209,7 @@ def main():
             success = compute_attendance_for_minute(
                 minute_ref=minute.get_reference(),
                 legislature=legislature,
-                llm_client=llm_client,
-                member_matcher=member_matcher,
+                attendance_parser=attendance_parser,
                 reprocess=reprocess
             )
             
@@ -328,7 +220,7 @@ def main():
         
         # Final summary
         print(f"\n{'='*80}")
-        print(f"🎯 FINAL SUMMARY")
+        print("🎯 FINAL SUMMARY")
         print(f"{'='*80}")
         print(f"Total minutes: {len(minutes)}")
         print(f"Successful: {successful}")

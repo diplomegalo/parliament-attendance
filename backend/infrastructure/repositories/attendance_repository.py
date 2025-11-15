@@ -7,8 +7,8 @@ Implements attendance data persistence using PostgreSQL.
 import psycopg2
 from typing import List, Optional
 from psycopg2.extras import execute_batch
-from ...domain.repositories import IAttendanceRepository
-from ...domain.entities import MemberPresence
+from domain.repositories import IAttendanceRepository
+from domain.entities import MemberPresence
 
 
 class PostgreSQLAttendanceRepository(IAttendanceRepository):

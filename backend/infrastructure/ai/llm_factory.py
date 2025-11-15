@@ -33,6 +33,12 @@ class LLMFactory:
         Raises:
             ValueError: If no valid LLM configuration is found
         """
+        # Check for dry run mode first
+        if os.getenv("DRY_RUN", "false").lower() == "true":
+            from infrastructure.ai.mock_llm_client import MockLLMClient
+            print("🧪 DRY RUN MODE: Using MockLLMClient (no API calls)")
+            return MockLLMClient()
+        
         # Try Azure OpenAI first
         if os.getenv("AZURE_OPENAI_ENDPOINT"):
             from infrastructure.ai.azure_openai_client import AzureOpenAIClient
@@ -55,6 +61,7 @@ class LLMFactory:
         
         raise ValueError(
             "No LLM provider configured. Please set one of the following environment variables:\n"
+            "  - DRY_RUN=true (for testing without API calls)\n"
             "  - AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY (for Azure OpenAI)\n"
             "  - OPENAI_API_KEY (for OpenAI)\n"
             "  - ANTHROPIC_API_KEY (for Anthropic Claude - coming soon)\n"
