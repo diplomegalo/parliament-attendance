@@ -1,4 +1,5 @@
 -- Drop tables if they exist (in reverse dependency order)
+DROP TABLE IF EXISTS minister_attendance CASCADE;
 DROP TABLE IF EXISTS member_votes CASCADE;
 DROP TABLE IF EXISTS votes CASCADE;
 DROP TABLE IF EXISTS member_presences CASCADE;
@@ -150,3 +151,30 @@ CREATE INDEX IF NOT EXISTS idx_cleaned_texts_text_hash
     ON cleaned_texts(text_hash);
 CREATE INDEX IF NOT EXISTS idx_cleaned_texts_cleaning_method 
     ON cleaned_texts(cleaning_method);
+
+-- Minister attendance table: Tracks minister presence in minutes
+-- Only for minutes containing vote nominatif
+CREATE TABLE IF NOT EXISTS minister_attendance(
+    id SERIAL PRIMARY KEY,
+    minister_id VARCHAR(50) NOT NULL,
+    minute_ref CHAR(4) NOT NULL,
+    legislature INTEGER NOT NULL,
+    present BOOLEAN NOT NULL,
+    confidence_score FLOAT,
+    context TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (minister_id, legislature) 
+        REFERENCES members(member_id, legislature) ON DELETE CASCADE,
+    FOREIGN KEY (minute_ref) 
+        REFERENCES minutes(ref) ON DELETE CASCADE,
+    UNIQUE(minister_id, minute_ref, legislature)
+);
+
+-- Indexes for minister attendance queries
+CREATE INDEX IF NOT EXISTS idx_minister_attendance_minister 
+    ON minister_attendance(minister_id, legislature);
+CREATE INDEX IF NOT EXISTS idx_minister_attendance_minute 
+    ON minister_attendance(minute_ref, legislature);
+CREATE INDEX IF NOT EXISTS idx_minister_attendance_present 
+    ON minister_attendance(present);

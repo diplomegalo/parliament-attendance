@@ -15,6 +15,7 @@ from .vote_parser import IVoteParser
 from .attendance_repository import IAttendanceRepository
 from .vote_repository import IVoteRepository
 from .cleaned_text_repository import ICleanedTextRepository
+from .minister_attendance_repository import IMinisterAttendanceRepository
 from .llm_client import (
     ILLMClient,
     LLMError,
@@ -35,6 +36,7 @@ __all__ = [
     'IAttendanceRepository',
     'IVoteRepository',
     'ICleanedTextRepository',
+    'IMinisterAttendanceRepository',
     'ILLMClient',
     'LLMError',
     'LLMConnectionError',
