@@ -178,3 +178,28 @@ CREATE INDEX IF NOT EXISTS idx_minister_attendance_minute
     ON minister_attendance(minute_ref, legislature);
 CREATE INDEX IF NOT EXISTS idx_minister_attendance_present 
     ON minister_attendance(present);
+
+-- View: Minister attendance summary per minister and legislature
+CREATE OR REPLACE VIEW v_minister_attendance_summary AS
+SELECT 
+    ma.minister_id,
+    m.full_name AS minister_name,
+    ma.legislature,
+    COUNT(*) AS total_minutes_with_votes,
+    SUM(CASE WHEN ma.present THEN 1 ELSE 0 END) AS present_count,
+    SUM(CASE WHEN NOT ma.present THEN 1 ELSE 0 END) AS absent_count,
+    ROUND(
+        (SUM(CASE WHEN ma.present THEN 1 ELSE 0 END)::NUMERIC / COUNT(*)::NUMERIC) * 100, 
+        2
+    ) AS attendance_rate_percent,
+    AVG(ma.confidence_score) AS avg_confidence_score,
+    MIN(ma.created_at) AS first_record_date,
+    MAX(ma.created_at) AS last_record_date
+FROM 
+    minister_attendance ma
+JOIN 
+    members m ON ma.minister_id = m.member_id AND ma.legislature = m.legislature
+GROUP BY 
+    ma.minister_id, m.full_name, ma.legislature
+ORDER BY 
+    attendance_rate_percent DESC;
