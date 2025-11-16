@@ -42,10 +42,10 @@ class MinuteTextCleaner:
         
         # Filter to voting sections if requested
         if extract_votes_only:
-            filtered_html = self._filter_to_voting_sections(html_content)
-            if filtered_html is None:
+            filtered_text = self._extract_from_votes_nominatifs(html_content)
+            if filtered_text is None:
                 return None
-            html_content = filtered_html
+            return filtered_text
         
         soup = BeautifulSoup(html_content, 'html.parser')
         
@@ -114,88 +114,53 @@ class MinuteTextCleaner:
         
         return text.strip()
     
-    def _filter_to_voting_sections(self, html_content: str) -> Optional[str]:
+    def _extract_from_votes_nominatifs(
+        self,
+        html_content: str
+    ) -> Optional[str]:
         """
-        Filter HTML to extract only vote nominatif and DETAIL sections.
+        Extract text from "Votes nominatifs" title onwards.
         
-        Two-phase extraction:
-        1. Vote nominatif: Individual vote results with "(Stemming/vote N)"
-        2. DETAIL section: Member names organized by vote number
-        
-        Searches for markers:
-        - "(Stemming/vote N)" - vote results with topics
-        - "DETAIL VAN DE NAAMSTEMMINGEN" / "DETAIL DES VOTES NOMINATIFS"
+        Finds "Votes nominatifs" in the HTML and extracts all content
+        from that point forward as plain text.
         
         Args:
             html_content: Raw HTML from parliamentary minute
             
         Returns:
-            Filtered HTML with vote topics and member details,
-            or None if no voting markers found
+            Clean plain text from "Votes nominatifs" onwards,
+            or None if "Votes nominatifs" not found
         """
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Patterns for vote sections
-        stemming_pattern = re.compile(
-            r'\(Stemming/vote\s+\d+\)',
-            re.IGNORECASE
-        )
-        detail_pattern = re.compile(
-            r'DETAIL (VAN DE NAAMSTEMMINGEN|DES VOTES NOMINATIFS)',
-            re.IGNORECASE
+        # Pattern to find "Votes nominatifs" in HTML
+        votes_pattern = re.compile(
+            r'Votes\s+nominatifs',
+            re.IGNORECASE | re.DOTALL
         )
         
-        # Find the first element containing a vote marker
-        first_vote_element = None
-        detail_element = None
+        # Search for the pattern in the HTML
+        match = votes_pattern.search(html_content)
         
-        # Search through all elements in document order
-        for element in soup.find_all(['p', 'h1', 'h2', 'table']):
-            text = element.get_text()
-            
-            # Check for first vote
-            if first_vote_element is None and stemming_pattern.search(text):
-                first_vote_element = element
-            
-            # Check for DETAIL section
-            if detail_element is None and detail_pattern.search(text):
-                detail_element = element
-            
-            # Stop if we found both
-            if first_vote_element and detail_element:
-                break
-        
-        # No votes found
-        if first_vote_element is None and detail_element is None:
+        # No "Votes nominatifs" found
+        if not match:
             return None
         
-        # Create filtered soup
-        filtered_soup = BeautifulSoup(
-            '<html><body></body></html>',
-            'html.parser'
-        )
-        body = filtered_soup.body
+        # Truncate HTML from this point onwards
+        truncated_html = html_content[match.start():]
         
-        # Start from whichever comes first
-        start_element = first_vote_element or detail_element
+        # Parse the truncated HTML and extract clean text
+        soup = BeautifulSoup(truncated_html, 'html.parser')
         
-        # Add the starting element and all its following siblings
-        current = start_element
-        while current:
-            body.append(current.__copy__())
-            current = current.find_next_sibling()
+        # Remove script and style elements
+        for element in soup(['script', 'style', 'meta', 'link']):
+            element.decompose()
         
-        # If DETAIL is in a different parent, add it too
-        if detail_element and detail_element != start_element:
-            # Check if detail_element is already included
-            if not filtered_soup.find(text=detail_pattern):
-                # DETAIL is in a different section, add it
-                current = detail_element
-                while current:
-                    body.append(current.__copy__())
-                    current = current.find_next_sibling()
+        # Get text content, stripping all HTML
+        text = soup.get_text(separator='\n', strip=True)
         
-        return str(filtered_soup)
+        # Normalize whitespace
+        text = self._normalize_whitespace(text)
+        
+        return text
     
     def extract_main_content(
         self,
