@@ -2,9 +2,9 @@
 """
 Compute Minister Attendance Job
 
-AI-powered minister attendance extraction from cleaned parliamentary minutes.
-Uses LLM to check if a specific minister was present in each minute
-containing vote nominatif.
+Regex-based minister attendance extraction from cleaned parliamentary minutes.
+Uses simple pattern matching to check if a specific minister was present
+in each minute containing vote nominatif.
 
 Usage:
     # Process single minute for a minister
@@ -24,10 +24,6 @@ Environment Variables:
     MINUTE_REF: Specific minute to process (optional)
     LEGISLATURE: Legislature number (e.g., 56)
     REPROCESS: Set to "true" to reprocess already computed attendance
-    
-    LLM Configuration (one required):
-    - OPENAI_API_KEY: For OpenAI API
-    - AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_API_KEY: For Azure OpenAI
 """
 
 import os
@@ -53,24 +49,18 @@ from infrastructure.repositories.member_repository import (
 from infrastructure.repositories.minister_attendance_repository import (
     PostgreSQLMinisterAttendanceRepository
 )
-from infrastructure.ai.llm_factory import LLMFactory
 from infrastructure.matchers.member_name_matcher import MemberNameMatcher
-from infrastructure.parsers.llm_minister_attendance_parser import (
-    LLMMinisterAttendanceParser
+from infrastructure.parsers.regex_minister_attendance_parser import (
+    RegexMinisterAttendanceParser
 )
 from domain.entities.minister_attendance import MinisterAttendance
-from domain.repositories import (
-    LLMError,
-    LLMConnectionError,
-    LLMRateLimitError
-)
 
 
 def compute_minister_attendance_for_minute(
     minute_ref: str,
     legislature: int,
     minister_name: str,
-    attendance_parser: LLMMinisterAttendanceParser,
+    attendance_parser: RegexMinisterAttendanceParser,
     reprocess: bool = False
 ) -> bool:
     """
@@ -169,19 +159,6 @@ def compute_minister_attendance_for_minute(
         
         return True
         
-    except LLMConnectionError as e:
-        print(f"❌ LLM Connection Error: {e}")
-        return False
-    except LLMRateLimitError as e:
-        print(f"⏸️  LLM Rate Limit: {e}")
-        print(
-            "   Consider adding retry logic or reducing "
-            "request frequency."
-        )
-        return False
-    except LLMError as e:
-        print(f"❌ LLM Error: {e}")
-        return False
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         import traceback
@@ -207,31 +184,14 @@ def main():
     print(f"Legislature: {legislature}")
     print(f"Reprocess: {reprocess}")
     
-    # Initialize LLM client
-    try:
-        print("\n🔧 Initializing LLM client...")
-        llm_client = LLMFactory.create_client()
-        print("✅ LLM client created successfully")
-        models = llm_client.get_available_models()[:3]
-        print(f"   Available models: {', '.join(models)}")
-    except ValueError as e:
-        print(f"❌ LLM Configuration Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"❌ Failed to initialize LLM client: {e}")
-        sys.exit(1)
-    
-    # Initialize member name matcher and parser
-    print("🔧 Initializing member name matcher...")
+    # Initialize member name matcher and parser (no LLM needed)
+    print("\n🔧 Initializing member name matcher...")
     member_repo = PostgresMemberRepository()
     member_matcher = MemberNameMatcher(member_repo, threshold=85)
     print("✅ Member matcher ready")
     
-    print("🔧 Initializing minister attendance parser...")
-    attendance_parser = LLMMinisterAttendanceParser(
-        llm_client,
-        member_matcher
-    )
+    print("🔧 Initializing regex minister attendance parser...")
+    attendance_parser = RegexMinisterAttendanceParser(member_matcher)
     print("✅ Minister attendance parser ready")
     
     # Process minutes
@@ -298,10 +258,10 @@ def main():
         
         # Match minister name to get ID
         member_matcher = MemberNameMatcher(member_repo, threshold=85)
-        matches = member_matcher.match_names([minister_name], legislature)
+        match = member_matcher.find_member_by_name(minister_name, legislature)
         
-        if matches and matches[0]:
-            minister_id = matches[0]['member_id']
+        if match:
+            minister_id, _ = match
             summary = attendance_repo.get_attendance_summary(
                 minister_id,
                 legislature

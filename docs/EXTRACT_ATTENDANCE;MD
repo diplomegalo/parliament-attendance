@@ -1,9 +1,0 @@
-# How to extract attendance
-
-The minutes are formated this way : first the _vote nominatif_ then the _detail_
-
-## Parse an downsize the file
-
-To extract the attendance first localize the vote nominative title an extract all the information below.
-
-After that localize the detail below.those information has to be extract for the other steps.
